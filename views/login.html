@@ -1,0 +1,70 @@
+<html>
+    <head>
+        <title>Clarity Database Login</title>
+        <link rel="stylesheet" type="text/css" href="/metroui/css/modern.css" />
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    </head>
+    <body class="metrouicss bg-color-blue">
+        <!--
+        <center>
+            <h2 class="padding80 bg-color-blue fg-color-white">Please login below</h2>
+
+            <form action="/login" method="post">
+                <input type="text" class="span6" placeholder="Username" required /><br>
+                <input type="password" class="span6" placeholder="Password" required /><br>
+
+                <button class="button default span6 bg-color-blueDark" type="submit">Submit</button><br>
+            </form>
+
+            <button class="button span6" type="button" href="{{adminlogin}}">Login with master account</button><br>
+
+            <div style="position:absolute;bottom:0px;">
+                Styled with <a href="http://metroui.org.ua">Metro UI CSS</a>
+            </div>
+
+        </center>
+        -->
+
+        <div class="page secondary">
+            <div class="page-header">
+                <div class="page-header-content">
+                    <h1>Please login below</h1>
+                </div>
+            </div>
+     
+            <div class="page-region">
+                <div class="page-region-content">
+                    
+                    <form action="/login" method="post">
+                        <div class="input-control text span6">
+                            <input type="text" name="username" placeholder="Username" required />
+                            <button class="btn-clear"></button>
+                        </div>
+
+                        <div class="input-control password span6">
+                            <input type="password" name="password" placeholder="Password" required />
+                            <button class="btn-reveal"></button>
+                        </div>
+
+                        <button class="button default span6 bg-color-blueDark" type="submit">Submit</button>
+                    </form>
+
+                    <button class="button span6" type="button" href="{{adminlogin}}">Login with master account</button>
+
+                </div>
+            </div>
+        </div>
+
+        <div style="position:absolute;bottom:0px;">
+            Styled with <a href="http://metroui.org.ua">Metro UI CSS</a>
+        </div>
+
+        <script type="text/javascript">
+            $('button').click(function() {
+                var href = $(this).attr('href');
+                if(!href){return;}
+                window.location = href;
+            });
+        </script>
+    </body>
+</html>

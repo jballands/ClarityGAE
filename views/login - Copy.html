@@ -1,0 +1,33 @@
+<html>
+    <head>
+        <title>Clarity Database Login</title>
+        <link rel="stylesheet" type="text/css" href="/metroui/css/modern.css" />
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    </head>
+    <body class="metrouicss">
+        <center>
+            <h2 class="padding80 bg-color-blue fg-color-white">Please login below</h2>
+
+            <form action="/login" method="post">
+                <input type="text" class="span6" placeholder="Username" required /><br>
+                <input type="password" class="span6" placeholder="Password" required /><br>
+
+                <button class="button default span6 bg-color-blueDark" type="submit">Submit</button><br>
+            </form>
+
+            <button class="button span6" type="button" href="{{adminlogin}}">Login with master account</button><br>
+
+            <div style="position:absolute;bottom:0px;">
+                Styled with <a href="http://metroui.org.ua">Metro UI CSS</a>
+            </div>
+
+        </center>
+        <script type="text/javascript">
+            $('button').click(function() {
+                var href = $(this).attr('href');
+                if(!href){return;}
+                window.location = href;
+            });
+        </script>
+    </body>
+</html>

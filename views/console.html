@@ -1,0 +1,72 @@
+<html>
+    <head>
+        <title>Clarity Database Console</title>
+        <link rel="stylesheet" type="text/css" href="/metroui/css/modern.css" />
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+        <script src="/metroui/js/pagecontrol.js"></script>
+    </head>
+    <body class="metrouicss">
+
+        <div class="page-control" data-role="page-control">
+            <!-- Responsive controls -->
+            <span class="menu-pull"></span> 
+            <div class="menu-pull-bar"></div>
+            <!-- Tabs -->
+            <ul>
+                <li class="active"><a href="#dbframe">Database</a></li>
+                <li><a href="#providerframe">Providers</a></li>
+                <li><a href="#patientframe">Patients</a></li>
+                <li class="disabled"><a href="#adminframe">Administrators</a></li>
+                <li class="place-right"><a href="#settingsframe"><i class="icon-cog fg-color-blue"></i></a></li>
+            </ul>
+            <!-- Tabs content -->
+            <div class="frames">
+
+                <div class="frame active" id="dbframe">
+                    <h2>Database</h2>
+                </div>
+                
+                <div class="frame" id="providerframe">
+                </div>
+
+                <div class="frame" id="patientframe">
+                </div>
+
+                <div class="frame" id="adminframe">
+                    {% if not user.master %}
+                    <h2 class="fg-color-red">Must be logged into the master account to audit administrator accounts.</h2>
+                    {% else %}
+                    <table class="striped bordered hovered">
+                        <tr class="info">
+                            <td>Username</td>
+                            <td>First Name</td>
+                            <td>Last Name</td>
+                        </tr>
+                        {% for admin in Administrator.all() %}
+                        <tr>
+                            <td>{{admin.username}}</td>
+                            <td>{{admin.firstname}}</td>
+                            <td>{{admin.lastname}}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    {% endif %}
+                </div>
+
+                <div class="frame" id="settingsframe">
+                    <h3>Click below to log out of the console.</h3>
+                    <a class="button" href="{{logout_url}}">Logout</a>
+                </div>
+
+            </div>
+        </div>
+
+        <script type="text/javascript">
+            $('#logout').click(function() {
+                var href = $(this).attr('href');
+                if(!href){return;}
+                window.location = href;
+            });
+        </script>
+    </body>
+</html>

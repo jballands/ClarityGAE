@@ -1,0 +1,20 @@
+<html>
+    <head>
+        <title>Redirection Gateway</title>
+        <link rel="stylesheet" type="text/css" href="/metroui/css/modern.css" />
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    </head>
+    <body class="metrouicss">
+        <h1 class="fg-color-red">Redirecting...</h1>
+        <h4><em>If you are not redirected automatically, <a href="{{location}}">click here</a>.</em></h4>
+        <script type="text/javascript">
+            function redirect(){
+                window.location = '{{location}}';
+            }
+
+            $(document).ready(function(){
+                setTimeout(redirect(), 2000);
+            });
+        </script>
+    </body>
+</html>

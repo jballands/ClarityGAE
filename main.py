@@ -29,18 +29,35 @@ from google.appengine.ext import blobstore
 
 from models import Administrator, Provider, Patient
 
-_path = os.path.dirname(__file__) or os.getcwd()
+_path = os.path.dirname(__file__) or os.getcwd() #Guaranteed current directory
+
+#Create a jinja environment for loading templates from the /views directory
 _jinja = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.join(_path, 'views')),
     extensions=['jinja2.ext.autoescape']
 )
 
+
+JINJA = _jinja.get_template #To further simplify matters
+
+#Facilitates simpler redirection templating
+#   -   I use a redirection template so I can redirect with javascript
+#       and avoid form data conflicts that I've had in the past.    
+def REDIRECT(uri):
+    return _jinja.get_template('redirect.html').render({'location': uri})
+
+#Complicated abstraction to fetch the current admin
 def admin_get(instance):
     assert isinstance(instance, webapp2.RequestHandler)
     user = users.get_current_user()
     if user and users.is_current_user_admin():
         user = Administrator.all().filter('master =', True).get()
         if not user:
+            #This will only be triggered in the event that; A. The current user
+            #   is signed in using a Google account that is granted
+            #   administrative priveleges over the GAE app.
+            #   B. There is not a master account already in the datastore
+            #   for said user to access.
             user = Administrator(
                 id=uuid.uuid4().hex,
                 username='master',
@@ -50,26 +67,25 @@ def admin_get(instance):
                 master=True
             )
             user.put()
-            user2 = Administrator(
-                id=uuid.uuid4().hex,
-                username='testing',
-                password='81dc9bdb52d04dc20036dbd8313ed055',
-                firstname='John',
-                lastname='Doe',
-                master=False
-            )
-            user2.put()
     else:
+        #If there is not a Google account logged in or the account does
+        #   not have administrative priveleges, it will default to checking
+        #   for a session key, and the even one is found, it will try to
+        #   match it up to a user in the datastore.
         session = instance.request.cookies.get('clarity-admin', None)
         if session:
             user = Administrator.all().filter('session =', session).get()
 
     return user
 
+#Handler for the index page *highlights "IndexHandler"*
 class IndexHandler(webapp2.RequestHandler):
     def get(self):
         self.response.write(_jinja.get_template('index.html').render())
 
+#Handler for the admin console.
+#   -   facilitates the logging in of admins
+#   -   passes the user data to the console HTML template
 class ConsoleHandler(webapp2.RequestHandler):
     def get(self):
         user = admin_get(self)
@@ -83,8 +99,11 @@ class ConsoleHandler(webapp2.RequestHandler):
             'Provider': Provider,
             'Patient': Patient
         }
-        self.response.write(_jinja.get_template('console.html').render(values))
+        self.response.write(JINJA('console.html').render(values))
 
+#Handler for logging in admins and providers
+#   -   currently only works for admins
+#   -   I'll add more comments later because right now I'm too hungry and sleepy
 class LoginHandler(webapp2.RequestHandler):
     def get(self):
         if self.request.get('logout', None):
@@ -122,6 +141,7 @@ class LoginHandler(webapp2.RequestHandler):
         else:
             self.error(403)
 
+#Delegating the various handlers to their respective paths
 app = webapp2.WSGIApplication([
     ('/', IndexHandler),
     ('/console', ConsoleHandler),

@@ -60,6 +60,7 @@ class Loan(db.Model):
     client = db.ReferenceProperty(Client, required=True, collection_name='loans')
 
 #Relationship Models:
+'''
 class TicketProvider(db.Model):
     ticket = db.ReferenceProperty(Ticket, required=True, collection_name='tickets')
     provider = db.ReferenceProperty(Provider, required=True, collection_name='providers')
@@ -75,3 +76,4 @@ class ClientService(db.Model):
 class ClientProvider(db.Model):
     client = db.ReferenceProperty(Client, required=True, collection_name='clients')
     provider = db.ReferenceProperty(Provider, required=True, collection_name='providers')
+'''

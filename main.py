@@ -17,6 +17,7 @@
 import os
 import json
 import uuid
+import random
 import hashlib
 import logging
 import datetime
@@ -28,7 +29,7 @@ from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 
-from models import Administrator, Provider, Patient
+import models
 
 _path = os.path.dirname(__file__) or os.getcwd() #Guaranteed current directory
 
@@ -117,7 +118,18 @@ class ConsoleHandler(webapp2.RequestHandler):
 
 class DummyHandler(webapp2.RequestHandler):
     def get(self):
-        return json.dumps(42)
+        #self.response.write(random.randint(0, 128))
+        derp()
+
+    def post(self):
+        prov = models.Provider(
+            name_first = self.request.get('name_first'),
+            name_last = self.request.get('name_last'),
+            username = 'null',
+            password = 'null',
+            admin = True
+        )
+        prov.put()
 
 #Handler for logging in admins and providers
 #   -   currently only works for admins
@@ -211,13 +223,13 @@ class DBHandler(webapp2.RequestHandler):
 
     def post(self):
         model = self.model_lookup[model.lower()]
-
+'''
 #Delegating the various handlers to their respective paths
 app = webapp2.WSGIApplication([
     ('/', IndexHandler),
     ('/console', ConsoleHandler),
-    ('/login', LoginHandler),
-    ('/debug', DebugHandler),
-    (r'/db', DBHandler),
+    ('/howmany', DummyHandler),
+    #('/login', LoginHandler),
+    #('/debug', DebugHandler),
+    #(r'/db', DBHandler),
 ], debug=True)
-'''

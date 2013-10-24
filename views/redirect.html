@@ -5,15 +5,15 @@
         <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
     </head>
     <body class="metrouicss">
-        <h1 class="fg-color-red">Redirecting...</h1>
-        <h4><em>If you are not redirected automatically, <a href="{{location}}">click here</a>.</em></h4>
+        {{ body|safe }}
+        <h4><em>If you are not redirected automatically, <a href="{{ uri }}">click here</a>.</em></h4>
         <script type="text/javascript">
             function redirect(){
-                window.location = '{{location}}';
+                window.location = '{{ uri }}';
             }
 
             $(document).ready(function(){
-                setTimeout(redirect(), 2000);
+                setTimeout(redirect(), {{ time|safe }});
             });
         </script>
     </body>

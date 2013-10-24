@@ -39,14 +39,12 @@
                     <table class="striped bordered hovered">
                         <tr class="info">
                             <td>Username</td>
-                            <td>First Name</td>
-                            <td>Last Name</td>
+                            <td>Name</td>
                         </tr>
                         {% for admin in Administrator.all() %}
                         <tr>
                             <td>{{admin.username}}</td>
-                            <td>{{admin.firstname}}</td>
-                            <td>{{admin.lastname}}</td>
+                            <td>{{admin.name}}</td>
                         </tr>
                         {% endfor %}
                     </table>
@@ -54,8 +52,25 @@
                 </div>
 
                 <div class="frame" id="settingsframe">
+					<h3>Your user key:</h3>
+					<em class="fg-color-blue">{{user.key()}}</em><br><br>
+                    
+                    {% if user.session %}
+                    <h3>Your session key:</h3>
+                    <em class="fg-color-blue">{{user.session}}</em><br><br>
+                    {% else %}
+                    <h3><em>No session key</em></h3><br>
+                    {% endif %}
+					
                     <h3>Click below to log out of the console.</h3>
-                    <a class="button" href="{{logout_url}}">Logout</a>
+                    <a class="button" href="{{logout_url}}">Logout</a><br><br>
+					
+					<button id="dummy">Create Dummy Entries</button>
+                    <script>
+                        $('#dummy').click(function(){
+                            $.ajax('/debug');
+                        });
+                    </script>
                 </div>
 
             </div>

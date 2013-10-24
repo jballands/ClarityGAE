@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 import os
+import json
 import uuid
 import hashlib
 import logging
@@ -43,15 +44,21 @@ JINJA = _jinja.get_template #To further simplify matters
 #Facilitates simpler redirection templating
 #   -   I use a redirection template so I can redirect with javascript
 #       and avoid form data conflicts that I've had in the past.    
-def REDIRECT(uri):
-    return _jinja.get_template('redirect.html').render({'location': uri})
+def REDIRECT(uri='/', time=2000, body='<h1 class="fg-color-red">Redirecting...</h1>'):
+    return _jinja.get_template('redirect.html').render({
+        'uri': uri,
+        'time': time,
+        'body': body
+    })
 
 #Complicated abstraction to fetch the current admin
 def admin_get(instance):
     assert isinstance(instance, webapp2.RequestHandler)
     user = users.get_current_user()
+    logging.info('CURRENTUSER ' + str(user))
     if user and users.is_current_user_admin():
         user = Administrator.all().filter('master =', True).get()
+        logging.info('CURRENTADMIN ' + str(user))
         if not user:
             #This will only be triggered in the event that; A. The current user
             #   is signed in using a Google account that is granted
@@ -59,29 +66,36 @@ def admin_get(instance):
             #   B. There is not a master account already in the datastore
             #   for said user to access.
             user = Administrator(
-                id=uuid.uuid4().hex,
+                #id=uuid.uuid4().hex,
                 username='master',
                 password='null',
-                firstname='Master',
-                lastname='Key',
+                name='Master Key',
                 master=True
             )
             user.put()
+            logging.info('ADJUSTED ' + str(user))
+        return user
     else:
         #If there is not a Google account logged in or the account does
         #   not have administrative priveleges, it will default to checking
         #   for a session key, and the even one is found, it will try to
         #   match it up to a user in the datastore.
         session = instance.request.cookies.get('clarity-admin', None)
+        logging.info('SESSION ' + str(session))
         if session:
             user = Administrator.all().filter('session =', session).get()
+            logging.info('SESSIONUSER ' + str(user))
+            return user
+    return None
 
-    return user
+def user_get(instance):
+    assert isinstance(instance, webapp2.RequestHandler)
+    user = users.get_current_user()
 
 #Handler for the index page *highlights "IndexHandler"*
 class IndexHandler(webapp2.RequestHandler):
     def get(self):
-        self.response.write(_jinja.get_template('index.html').render())
+        self.response.write(JINJA('index.html').render())
 
 #Handler for the admin console.
 #   -   facilitates the logging in of admins
@@ -101,9 +115,14 @@ class ConsoleHandler(webapp2.RequestHandler):
         }
         self.response.write(JINJA('console.html').render(values))
 
+class DummyHandler(webapp2.RequestHandler):
+    def get(self):
+        return json.dumps(42)
+
 #Handler for logging in admins and providers
 #   -   currently only works for admins
 #   -   I'll add more comments later because right now I'm too hungry and sleepy
+'''
 class LoginHandler(webapp2.RequestHandler):
     def get(self):
         if self.request.get('logout', None):
@@ -126,6 +145,7 @@ class LoginHandler(webapp2.RequestHandler):
         if user:
             session = uuid.uuid4().hex
             user.session = session
+            logging.info('SESSIONADJUSTED ' + session)
             user.put()
             self.response.set_cookie(
                 'clarity-admin',
@@ -135,15 +155,69 @@ class LoginHandler(webapp2.RequestHandler):
             )
             #self.response.write(_redirect.format('/console'))
             #self.redirect('/console')
-            self.response.write(_jinja.get_template('redirect.html').render({
-                'location': '/console'
-            }))
+            #self.response.write(_jinja.get_template('redirect.html').render({
+            #    'location': '/console'
+            #}))
+            self.response.write(REDIRECT('/console'))
         else:
             self.error(403)
+
+class DebugHandler(webapp2.RequestHandler):
+    def get(self):
+        Administrator(
+            username='anonymous',
+            password='294de3557d9d00b3d2d8a1e6aab028cf', #anonymous
+            name='Foo Bar',
+            master=False
+        ).put()
+
+        Provider(
+            username='jkevork',
+            password='f9f16d97c90d8c6f2cab37bb6d1f1992', #doctor
+            name='Jack Kevorkian',
+            location='Roanoke, VA', #This should be lat/long coordinates but I'm lazy so...
+            active=True
+        ).put()
+
+        Patient(
+            name='Samuel Gillispie',
+            date_birth=datetime.date(1994, 6, 3),
+            location='Roanoke, VA', #Same as before, but I'm still lazy
+            sex='male'
+        ).put()
+
+        logging.info('DUMMIES CREATED')
+
+class DBHandler(webapp2.RequestHandler):
+    fields = {
+        Administrator: Administrator.properties(),
+        Provider: Provider.properties(),
+        Patient: Patient:properties(),
+    }
+    def get(self):
+        data = json.loads(self.request.get('data', default_value='{}'))
+        keys = data.get('keys', [])
+        fields = data.get('fields', [])
+        assert isinstance(keys, list) and isinstance(fields, list) #you niggas better not screw up
+        output = []
+        for key in keys:
+            model = db.get(key)
+            model_out = {}
+            for k in model.properties():
+                model_out[k] = str(getattr(model, k))
+            model_out['key'] = key
+            output.append(model_out)
+        self.response.write(json.dumps(output, indent=4, sort_keys=True).replace('\n', '<br>'))
+
+    def post(self):
+        model = self.model_lookup[model.lower()]
 
 #Delegating the various handlers to their respective paths
 app = webapp2.WSGIApplication([
     ('/', IndexHandler),
     ('/console', ConsoleHandler),
     ('/login', LoginHandler),
+    ('/debug', DebugHandler),
+    (r'/db', DBHandler),
 ], debug=True)
+'''

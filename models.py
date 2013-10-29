@@ -2,6 +2,9 @@ from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 
+class Blobby(db.Model):
+    data = db.BlobProperty(required=False)
+
 class Provider(db.Model):
     #General properties:
     name_prefix = db.StringProperty(required=False)
@@ -49,6 +52,7 @@ class Ticket(db.Model):
 class Service(db.Model):
     name = db.StringProperty(required=True)
     quantity = db.IntegerProperty(required=True)
+    provider = db.ReferenceProperty(Provider, required=True, collection_name='services')
 
 class Loan(db.Model):
     disbursed = db.FloatProperty(required=True)
@@ -64,16 +68,12 @@ class Loan(db.Model):
 class TicketProvider(db.Model):
     ticket = db.ReferenceProperty(Ticket, required=True, collection_name='tickets')
     provider = db.ReferenceProperty(Provider, required=True, collection_name='providers')
+'''
 
 class TicketService(db.Model):
     ticket = db.ReferenceProperty(Ticket, required=True, collection_name='tickets')
-    service = db.ReferenceProperty(Service, required=True, collection_name='services')
-
-class ClientService(db.Model):
-    client = db.ReferenceProperty(Client, required=True, collection_name='clients')
-    service = db.ReferenceProperty(Service, required=True, collection_name='services')
+    service = db.ReferenceProperty(Service, required=True, collection_name='services'),
 
 class ClientProvider(db.Model):
     client = db.ReferenceProperty(Client, required=True, collection_name='clients')
     provider = db.ReferenceProperty(Provider, required=True, collection_name='providers')
-'''

@@ -14,7 +14,7 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.48.4 r9939"
-   sodipodi:docname="ClarityLogo_blue.svg">
+   sodipodi:docname="ClarityLogo_white.svg">
   <defs
      id="defs4" />
   <sodipodi:namedview
@@ -26,7 +26,7 @@
      inkscape:pageshadow="2"
      inkscape:zoom="0.35"
      inkscape:cx="229.35713"
-     inkscape:cy="673.737"
+     inkscape:cy="445.16557"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -47,7 +47,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -56,11 +56,6 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(300.07142,-475.27806)">
-    <path
-       inkscape:connector-curvature="0"
-       id="path3025"
-       d="m -725.78571,646.64789 0,-432.5 1106.5,0 1106.50001,0 0,432.5 0,432.50001 -1106.50001,0 -1106.5,0 0,-432.50001 z"
-       style="fill:#fefefe" />
     <path
        inkscape:connector-curvature="0"
        id="path3011"

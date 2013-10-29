@@ -17,10 +17,12 @@
 import os
 import json
 import uuid
+import base64
 import random
 import hashlib
 import logging
 import datetime
+import mimetypes
 
 import webapp2
 import jinja2
@@ -31,7 +33,11 @@ from google.appengine.ext import blobstore
 
 import models
 
+import ppk
+
 _path = os.path.dirname(__file__) or os.getcwd() #Guaranteed current directory
+_pool = ppk.Pool()
+_pool.include(os.path.join(_path, 'ppk'))
 
 #Create a jinja environment for loading templates from the /views directory
 _jinja = jinja2.Environment(
@@ -117,11 +123,13 @@ class ConsoleHandler(webapp2.RequestHandler):
         self.response.write(JINJA('console.html').render(values))
 
 class DummyHandler(webapp2.RequestHandler):
-    def get(self):
-        #self.response.write(random.randint(0, 128))
-        derp()
-
     def post(self):
+        #self.redirect(blobstore.create_upload_url())
+        blob = models.Blobby()
+        blob.data = db.Blob(self.request.get('msg'))
+        blob.put()
+
+    '''def post(self):
         prov = models.Provider(
             name_first = self.request.get('name_first'),
             name_last = self.request.get('name_last'),
@@ -129,7 +137,12 @@ class DummyHandler(webapp2.RequestHandler):
             password = 'null',
             admin = True
         )
-        prov.put()
+        prov.put()'''
+
+class PPKHandler(webapp2.RequestHandler):
+    def get(self, path):
+        self.response.headers['Content-Type'] = mimetypes.guess_type(path)[0]
+        self.response.write(_pool.read(path))
 
 #Handler for logging in admins and providers
 #   -   currently only works for admins
@@ -227,8 +240,10 @@ class DBHandler(webapp2.RequestHandler):
 #Delegating the various handlers to their respective paths
 app = webapp2.WSGIApplication([
     ('/', IndexHandler),
+    ('/ppk/(.*)', PPKHandler),
     ('/console', ConsoleHandler),
     ('/howmany', DummyHandler),
+    #('/api/', APIHandler)
     #('/login', LoginHandler),
     #('/debug', DebugHandler),
     #(r'/db', DBHandler),

@@ -10,14 +10,15 @@ automatic_scaling:
 
 handlers:
 - url: /favicon\.ico
-  static_files: favicon.ico
-  upload: favicon.ico
-
-- url: /metroui
-  static_dir: metroui
+  static_files: static/image/ClarityIcon_blue_16.png
+  upload: static/image/ClarityIcon_blue_16.png
 
 - url: /static
   static_dir: static
+
+- url: /cron
+  script: main.app
+  login: admin
 
 - url: .*
   script: main.app

@@ -1,87 +1,82 @@
 <html>
     <head>
         <title>Clarity Database Console</title>
-        <link rel="stylesheet" type="text/css" href="/metroui/css/modern.css" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet" media="screen">
         <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-        <script src="/metroui/js/pagecontrol.js"></script>
+        <script src="/static/js/bootstrap.min.js"></script>
     </head>
-    <body class="metrouicss">
+    <body>
+        <!--<a href="/login?close=true" class="btn btn-primary" role="button">Logout</a>
+        <button class="btn" id="qrbutton">Generate some QR's</button>
+        <script type="text/javascript">
+            $('#qrbutton').click(function() {
 
-        <div class="page-control" data-role="page-control">
-            <!-- Responsive controls -->
-            <span class="menu-pull"></span> 
-            <div class="menu-pull-bar"></div>
-            <!-- Tabs -->
-            <ul>
-                <li class="active"><a href="#dbframe">Database</a></li>
-                <li><a href="#providerframe">Providers</a></li>
-                <li><a href="#patientframe">Patients</a></li>
-                <li class="disabled"><a href="#adminframe">Administrators</a></li>
-                <li class="place-right"><a href="#settingsframe"><i class="icon-cog fg-color-blue"></i></a></li>
-            </ul>
-            <!-- Tabs content -->
-            <div class="frames">
+            });
+        </script>-->
 
-                <div class="frame active" id="dbframe">
-                    <h2>Database</h2>
-                </div>
-                
-                <div class="frame" id="providerframe">
-                </div>
+        <!-- NAVBAR START -->
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#tab-home" data-toggle="tab">Home</a></li>
+            <li><a href="#tab-data" data-toggle="tab">View Data</a></li>
+            <li><a href="#tab-qr" data-toggle="tab">QR Generator</a></li>
 
-                <div class="frame" id="patientframe">
-                </div>
+            <li class="dropdown pull-right">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                <!--Logged in as {{ user.name_first }} {{ user.name_last }} <span class="caret"></span>-->
+                <span class="glyphicon glyphicon-user"></span> {{ user.name_first }} {{ user.name_last }}
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a href="#tab-settings" data-toggle="tab">Settings</a></li>
+                    <li><a href="/login?close=true">Logout</a></li>
+                </ul>
+            </li>
+        </ul>
+        <!-- NAVBAR END -->
 
-                <div class="frame" id="adminframe">
-                    {% if not user.master %}
-                    <h2 class="fg-color-red">Must be logged into the master account to audit administrator accounts.</h2>
-                    {% else %}
-                    <table class="striped bordered hovered">
-                        <tr class="info">
-                            <td>Username</td>
-                            <td>Name</td>
-                        </tr>
-                        {% for admin in Administrator.all() %}
-                        <tr>
-                            <td>{{admin.username}}</td>
-                            <td>{{admin.name}}</td>
-                        </tr>
-                        {% endfor %}
-                    </table>
-                    {% endif %}
-                </div>
+        <div class="tab-content">
 
-                <div class="frame" id="settingsframe">
-					<h3>Your user key:</h3>
-					<em class="fg-color-blue">{{user.key()}}</em><br><br>
-                    
-                    {% if user.session %}
-                    <h3>Your session key:</h3>
-                    <em class="fg-color-blue">{{user.session}}</em><br><br>
-                    {% else %}
-                    <h3><em>No session key</em></h3><br>
-                    {% endif %}
-					
-                    <h3>Click below to log out of the console.</h3>
-                    <a class="button" href="{{logout_url}}">Logout</a><br><br>
-					
-					<button id="dummy">Create Dummy Entries</button>
-                    <script>
-                        $('#dummy').click(function(){
-                            $.ajax('/debug');
-                        });
-                    </script>
-                </div>
-
+        <!-- HOME TAB START -->
+        <div class="tab-pane fade in active" id="tab-home">
+            <a href="/">
+            <div style="
+                width: 100%;
+                position: absolute;
+                top: 40%;
+                text-align: center;
+            ">
+                <img src="/static/image/ClarityLogo_blue.svg" style="height: 8em;"><br>
+                <font style="
+                    font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif;
+                    font-size: 1em;
+                    color: #0091f6;
+                ">
+                    CONSOLE
+                </font>
             </div>
+            </a>
+        </div>
+        <!-- HOME TAB END -->
+
+        <!-- DATA TAB START -->
+        <div class="tab-pane fade" id="tab-data">
+            <h1>How</h1>
+        </div>
+        <!-- DATA TAB END -->
+
+        <!-- QR TAB START -->
+        <div class="tab-pane fade" id="tab-qr">
+            <h1>are</h1>
+        </div>
+        <!-- QR TAB END -->
+
+        <!-- SETTINGS TAB START -->
+        <div class="tab-pane fade" id="tab-settings">
+            <h1>you?</h1>
+        </div>
+        <!-- SETTINGS TAB END -->
+
         </div>
 
-        <script type="text/javascript">
-            $('#logout').click(function() {
-                var href = $(this).attr('href');
-                if(!href){return;}
-                window.location = href;
-            });
-        </script>
     </body>
 </html>

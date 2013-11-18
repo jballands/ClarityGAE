@@ -1,0 +1,4 @@
+cron:
+- description: daily session pruning
+  url: /cron/prune
+  schedule: every 24 hours

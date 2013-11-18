@@ -1,19 +1,3 @@
-#!/usr/bin/env python
-#
-# Copyright 2007 Google Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
 import os
 import json
 import uuid
@@ -33,11 +17,7 @@ from google.appengine.ext import blobstore
 
 import models
 
-import ppk
-
 _path = os.path.dirname(__file__) or os.getcwd() #Guaranteed current directory
-_pool = ppk.Pool()
-_pool.include(os.path.join(_path, 'ppk'))
 
 #Create a jinja environment for loading templates from the /views directory
 _jinja = jinja2.Environment(
@@ -51,53 +31,36 @@ JINJA = _jinja.get_template #To further simplify matters
 #Facilitates simpler redirection templating
 #   -   I use a redirection template so I can redirect with javascript
 #       and avoid form data conflicts that I've had in the past.    
-def REDIRECT(uri='/', time=2000, body='<h1 class="fg-color-red">Redirecting...</h1>'):
+def REDIRECT(uri='/', time=2000, body=None):
     return _jinja.get_template('redirect.html').render({
         'uri': uri,
         'time': time,
         'body': body
     })
 
-#Complicated abstraction to fetch the current admin
-def admin_get(instance):
-    assert isinstance(instance, webapp2.RequestHandler)
-    user = users.get_current_user()
-    logging.info('CURRENTUSER ' + str(user))
-    if user and users.is_current_user_admin():
-        user = Administrator.all().filter('master =', True).get()
-        logging.info('CURRENTADMIN ' + str(user))
-        if not user:
-            #This will only be triggered in the event that; A. The current user
-            #   is signed in using a Google account that is granted
-            #   administrative priveleges over the GAE app.
-            #   B. There is not a master account already in the datastore
-            #   for said user to access.
-            user = Administrator(
-                #id=uuid.uuid4().hex,
-                username='master',
-                password='null',
-                name='Master Key',
-                master=True
-            )
-            user.put()
-            logging.info('ADJUSTED ' + str(user))
-        return user
-    else:
-        #If there is not a Google account logged in or the account does
-        #   not have administrative priveleges, it will default to checking
-        #   for a session key, and the even one is found, it will try to
-        #   match it up to a user in the datastore.
-        session = instance.request.cookies.get('clarity-admin', None)
-        logging.info('SESSION ' + str(session))
+def user_get(instance):
+    sessionkey = instance.request.cookies.get('clarity-console-session', None)
+    if sessionkey:
+        logging.info(sessionkey)
+        session = models.Session.get(sessionkey)
         if session:
-            user = Administrator.all().filter('session =', session).get()
-            logging.info('SESSIONUSER ' + str(user))
-            return user
+            return session.user
     return None
 
-def user_get(instance):
-    assert isinstance(instance, webapp2.RequestHandler)
-    user = users.get_current_user()
+def session_get(token):
+    if not token: return None
+
+    session = models.Session.all().filter('token =', token).get()
+    if not session: return None
+
+    if session.closed: return None
+
+    if datetime.datetime.utcnow() > session.expiration:
+        session.closed = True
+        session.put()
+        return None
+
+    return session
 
 #Handler for the index page *highlights "IndexHandler"*
 class IndexHandler(webapp2.RequestHandler):
@@ -109,18 +72,17 @@ class IndexHandler(webapp2.RequestHandler):
 #   -   passes the user data to the console HTML template
 class ConsoleHandler(webapp2.RequestHandler):
     def get(self):
-        user = admin_get(self)
+        user = user_get(self)
         if not user:
             self.redirect('/login')
             return
         values = {
-            'user': user,
-            'logout_url': '/login?logout=1' if not user.master else users.create_logout_url(dest_url='/'),
-            'Administrator': Administrator,
-            'Provider': Provider,
-            'Patient': Patient
+            'user': user
         }
         self.response.write(JINJA('console.html').render(values))
+
+class QRHandler(webapp2.RequestHandler):
+    def get(self): pass
 
 class DummyHandler(webapp2.RequestHandler):
     def post(self):
@@ -129,15 +91,30 @@ class DummyHandler(webapp2.RequestHandler):
         blob.data = db.Blob(self.request.get('msg'))
         blob.put()
 
-    '''def post(self):
-        prov = models.Provider(
-            name_first = self.request.get('name_first'),
-            name_last = self.request.get('name_last'),
-            username = 'null',
-            password = 'null',
-            admin = True
-        )
-        prov.put()'''
+    def get(self):
+        models.Provider(
+            name_first='Samuel',
+            name_middle='Paige',
+            name_last='Gillispie',
+            name_suffix='II',
+
+            username='spgill',
+            password='5f4dcc3b5aa765d61d8327deb882cf99',
+
+            admin=True,
+        ).put()
+
+        models.Provider(
+            name_first='Jonathan',
+            name_last='Ballands',
+
+            username='jonathan',
+            password='5f4dcc3b5aa765d61d8327deb882cf99',
+
+            admin=True,
+        ).put()
+
+        self.response.write('New users inserted!')
 
 class PPKHandler(webapp2.RequestHandler):
     def get(self, path):
@@ -145,104 +122,189 @@ class PPKHandler(webapp2.RequestHandler):
         self.response.write(_pool.read(path))
 
 #Handler for logging in admins and providers
-#   -   currently only works for admins
 #   -   I'll add more comments later because right now I'm too hungry and sleepy
-'''
-class LoginHandler(webapp2.RequestHandler):
+class ConsoleLoginHandler(webapp2.RequestHandler):
     def get(self):
-        if self.request.get('logout', None):
-            self.response.delete_cookie('clarity-admin')
-            self.response.write(_jinja.get_template('redirect.html').render({
-                'location': '/'
-            }))
+        if self.request.get('close', '') == 'true':
+            self.response.delete_cookie('clarity-console-session')
+            self.response.write(REDIRECT('/'))
         else:
-            values = {
-                'adminlogin': users.create_login_url(dest_url='/console')
-            }
-            self.response.write(_jinja.get_template('login.html').render(values))
+            user = user_get(self)
+            if user:
+                self.response.write(REDIRECT('/console'))
+            else:
+                values = {
+                    'request': self.request
+                }
+                #self.response.write(_jinja.get_template('login.html').render(values))
+                self.response.write(JINJA('login.html').render(values))
 
     def post(self):
         username = self.request.get('username', None)
         password = self.request.get('password', None)
-        if not (username or password): self.error(403)
-        digest = hashlib.md5(password).hexdigest()
-        user = Administrator.all().filter('username =', username).filter('password =', digest).get()
+
+        if not (username or password):
+            logging.info('No username or password given')
+            self.error(403)
+            return
+
+        user = models.Provider.all().filter('username =', username).get()
         if user:
-            session = uuid.uuid4().hex
-            user.session = session
-            logging.info('SESSIONADJUSTED ' + session)
-            user.put()
-            self.response.set_cookie(
-                'clarity-admin',
-                value=session,
-                path='/',
-                expires=datetime.datetime.now() + datetime.timedelta(days=1)
+            digest = hashlib.md5(password).hexdigest()
+            if digest != user.password:
+                logging.info('Password digest did not match record\'s digest')
+                self.error(403)
+                return
+            timeout = datetime.timedelta(minutes=60)
+            session = models.Session(
+                user = user,
+                api = False
             )
-            #self.response.write(_redirect.format('/console'))
-            #self.redirect('/console')
-            #self.response.write(_jinja.get_template('redirect.html').render({
-            #    'location': '/console'
-            #}))
+            session.expiration = session.creation + timeout
+            session.put()
+            self.response.set_cookie(
+                'clarity-console-session',
+                value=str(session.key()),
+                #path='/',
+                #expires=datetime.datetime.now() + timeout
+            )
+            logging.info('SUCCESS')
             self.response.write(REDIRECT('/console'))
         else:
+            self.redirect('/login?error=403')
+
+class CronHandler(webapp2.RequestHandler):
+    def get(self, action):
+        if action == 'prune':
+            for session in models.Session.all():
+                if datetime.datetime.utcnow() > session.expiration or session.closed:
+                    session.delete()
+        else:
+            self.error(404)
+            return
+
+class _APIHandler(webapp2.RequestHandler):
+    _model = object
+
+    def route(self, action):
+        token = self.request.get('token', None)
+        if not self.session_from_token(token):
             self.error(403)
+            return
 
-class DebugHandler(webapp2.RequestHandler):
-    def get(self):
-        Administrator(
-            username='anonymous',
-            password='294de3557d9d00b3d2d8a1e6aab028cf', #anonymous
-            name='Foo Bar',
-            master=False
-        ).put()
+        function = 'api_' + action
+        if hasattr(self, function):
+            getattr(self, function)()
+        else:
+            self.error(404)
+    post = route
+    get = route
 
-        Provider(
-            username='jkevork',
-            password='f9f16d97c90d8c6f2cab37bb6d1f1992', #doctor
-            name='Jack Kevorkian',
-            location='Roanoke, VA', #This should be lat/long coordinates but I'm lazy so...
-            active=True
-        ).put()
+    @staticmethod
+    def serialize(model):
+        pass
 
-        Patient(
-            name='Samuel Gillispie',
-            date_birth=datetime.date(1994, 6, 3),
-            location='Roanoke, VA', #Same as before, but I'm still lazy
-            sex='male'
-        ).put()
+    @staticmethod
+    def session_from_token(token):
+        if not token: return None
 
-        logging.info('DUMMIES CREATED')
+        session = models.Session.all().filter('token =', token).get()
+        if not session: return None
 
-class DBHandler(webapp2.RequestHandler):
-    fields = {
-        Administrator: Administrator.properties(),
-        Provider: Provider.properties(),
-        Patient: Patient:properties(),
-    }
-    def get(self):
-        data = json.loads(self.request.get('data', default_value='{}'))
-        keys = data.get('keys', [])
-        fields = data.get('fields', [])
-        assert isinstance(keys, list) and isinstance(fields, list) #you niggas better not screw up
-        output = []
-        for key in keys:
-            model = db.get(key)
-            model_out = {}
-            for k in model.properties():
-                model_out[k] = str(getattr(model, k))
-            model_out['key'] = key
-            output.append(model_out)
-        self.response.write(json.dumps(output, indent=4, sort_keys=True).replace('\n', '<br>'))
+        if session.closed: return None
 
-    def post(self):
-        model = self.model_lookup[model.lower()]
-'''
+        if datetime.datetime.utcnow() > session.expiration:
+            session.closed = True
+            session.put()
+            return None
+
+        return session
+
+class SessionHandler(webapp2.RequestHandler):
+    def get(self, action):
+        function = 'session_' + action
+        if hasattr(self, function):
+            getattr(self, function)()
+        else:
+            self.error(404)
+
+    def session_begin(self):
+        username = self.request.get('username', '')
+        password = self.request.get('password', '')
+        api_session = not self.request.get('console', '')
+
+        user = models.Provider.all().filter('username =', username).get()
+        if not user:
+            self.error(403)
+            return
+
+        password_hash = hashlib.md5(password).hexdigest()
+        if not password_hash == user.password:
+            self.error(403)
+            return
+
+        session = models.Session(
+            user = user,
+            api = api_session
+        )
+        session.expiration = session.creation + datetime.timedelta(days=1)
+        session.put()
+
+        self.response.write(json.dumps({
+            'token': session.token,
+            'provider': {
+                'name_prefix': user.name_prefix,
+                'name_first': user.name_first,
+                'name_middle': user.name_middle,
+                'name_last': user.name_last,
+                'name_suffix': user.name_suffix,
+            }
+        }))
+
+    def session_end(self):
+        token = self.request.get('token', '')
+        if not token:
+            self.error(404)
+            return
+
+        session = session_get(token)
+        if not session:
+            self.error(403)
+            return
+
+        session.closed = True
+        session.put()
+
+        json.dump('big black cock', self.response) #Don't mind this
+
+class APIClientHandler(_APIHandler):
+    def api_create(self):
+        fields = {}
+        args = self.request.arguments()
+        for arg in args:
+            fields[arg] = self.request.get(arg)
+        client = models.Client(**fields)
+        client.put()
+        json.dump({
+            'id': str(client.key())
+        }, self.response)
+
+class APITicketHandler(_APIHandler):
+    def api_create(self):
+        args = self.response.arguments()
+
 #Delegating the various handlers to their respective paths
 app = webapp2.WSGIApplication([
     ('/', IndexHandler),
     ('/ppk/(.*)', PPKHandler),
     ('/console', ConsoleHandler),
+    ('/console/qr', QRHandler),
     ('/howmany', DummyHandler),
+    ('/login', ConsoleLoginHandler),
+    ('/cron/(\w+)', CronHandler),
+    ('/api/session_(\w+)', SessionHandler),
+    ('/api/client_(\w+)', APIClientHandler),
+    ('/api/ticket_(\w+)', APITicketHandler)
     #('/api/', APIHandler)
     #('/login', LoginHandler),
     #('/debug', DebugHandler),

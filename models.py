@@ -38,9 +38,16 @@ class Session(db.Model):
     closed = db.BooleanProperty(required=False)
 
     def __init__(self, *args, **kwargs):
-        kwargs['token'] = uuid.uuid4().hex
-        kwargs['closed'] = False
+        #kwargs['token'] = uuid.uuid4().hex
+        #kwargs['closed'] = False
         db.Model.__init__(self, *args, **kwargs)
+        if not self.token:
+            self.token = uuid.uuid4().hex
+            self.closed = False
+
+    def close(self):
+        self.closed = True
+        self.put()
 
 class Client(db.Model):
     name_prefix = db.StringProperty(required=False)

@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import uuid
 import base64
@@ -72,12 +73,12 @@ class IndexHandler(webapp2.RequestHandler):
 #   -   passes the user data to the console HTML template
 class ConsoleHandler(webapp2.RequestHandler):
     def get(self):
-        user = user_get(self)
-        if not user:
+        session = _APIHandler.session_from_token(self.request.cookies.get('clarity-console-session', ''))
+        if not session:
             self.redirect('/login')
             return
         values = {
-            'user': user
+            'session': session
         }
         self.response.write(JINJA('console.html').render(values))
 
@@ -125,12 +126,14 @@ class PPKHandler(webapp2.RequestHandler):
 #   -   I'll add more comments later because right now I'm too hungry and sleepy
 class ConsoleLoginHandler(webapp2.RequestHandler):
     def get(self):
+        session = _APIHandler.session_from_token(self.request.cookies.get('clarity-console-session', ''))
         if self.request.get('close', '') == 'true':
+            if session:
+                session.close()
             self.response.delete_cookie('clarity-console-session')
             self.response.write(REDIRECT('/'))
         else:
-            user = user_get(self)
-            if user:
+            if session:
                 self.response.write(REDIRECT('/console'))
             else:
                 values = {
@@ -144,16 +147,16 @@ class ConsoleLoginHandler(webapp2.RequestHandler):
         password = self.request.get('password', None)
 
         if not (username or password):
-            logging.info('No username or password given')
             self.error(403)
+            self.redirect('/login?error=403')
             return
 
         user = models.Provider.all().filter('username =', username).get()
         if user:
             digest = hashlib.md5(password).hexdigest()
             if digest != user.password:
-                logging.info('Password digest did not match record\'s digest')
                 self.error(403)
+                self.redirect('/login?error=403')
                 return
             timeout = datetime.timedelta(minutes=60)
             session = models.Session(
@@ -164,14 +167,16 @@ class ConsoleLoginHandler(webapp2.RequestHandler):
             session.put()
             self.response.set_cookie(
                 'clarity-console-session',
-                value=str(session.key()),
-                #path='/',
+                value=session.token,
+                path='/',
                 #expires=datetime.datetime.now() + timeout
             )
             logging.info('SUCCESS')
             self.response.write(REDIRECT('/console'))
         else:
+            self.error(403)
             self.redirect('/login?error=403')
+            return
 
 class CronHandler(webapp2.RequestHandler):
     def get(self, action):
@@ -182,6 +187,25 @@ class CronHandler(webapp2.RequestHandler):
         else:
             self.error(404)
             return
+
+class _APIEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (datetime.datetime, datetime.date)):
+            return str(obj)
+        else:
+            return json.JSONEncoder.default(self, obj)
+
+datetime_format = '%Y-%m-%d %H:%M:%S.%f'
+date_format = '%Y-%m-%d'
+class _APIDecoder(json.JSONDecoder):
+    def decode(self, obj):
+        result = None
+        try:
+            result = datetime.strptime(obj, date_format).date
+            result = datetime.strptime(obj, datetime_format)
+        except: pass
+        if result: return result
+        return json.JSONDecoder.decode(self, obj)
 
 class _APIHandler(webapp2.RequestHandler):
     _model = object
@@ -200,9 +224,47 @@ class _APIHandler(webapp2.RequestHandler):
     post = route
     get = route
 
+    def api_create(self):
+        valid = self._model.properties().keys()
+        fields = {}
+        args = self.request.arguments()
+        for arg in args:
+            if arg == 'token': continue
+            if not arg in valid:
+                self.error(401)
+                return
+            fields[arg] = self.request.get(arg)
+        instance = self._model(**fields)
+        instance.put()
+        json.dump({
+            'id': str(instance.key())
+        }, self.response)
+
+    def api_get(self):
+        args = self.request.arguments()
+        if not 'id' in args:
+            models = [self.resolve_properties(model) for model in self._model.all()]
+            json.dump(models, self.response, skipkeys=True, cls=_APIEncoder)
+        else:
+            instancekey = self.request.get('id')
+            try:
+                instance = self._model.get(instancekey)
+            except db.BadKeyError, db.KindError:
+                self.error(404)
+                return
+            if not instance:
+                self.error(404)
+                return
+            json.dump(self.resolve_properties(instance), self.response, skipkeys=True, cls=_APIEncoder)
+
     @staticmethod
-    def serialize(model):
-        pass
+    def resolve_properties(instance):
+        out = {}
+        properties = instance.properties()
+        for name in properties:
+            out[name] = getattr(instance, name)
+        out["id"] = str(instance.key())
+        return out
 
     @staticmethod
     def session_from_token(token):
@@ -277,32 +339,25 @@ class SessionHandler(webapp2.RequestHandler):
 
         json.dump('big black cock', self.response) #Don't mind this
 
+class APIProviderHandler(_APIHandler):
+    _model = models.Provider
+
 class APIClientHandler(_APIHandler):
-    def api_create(self):
-        fields = {}
-        args = self.request.arguments()
-        for arg in args:
-            fields[arg] = self.request.get(arg)
-        client = models.Client(**fields)
-        client.put()
-        json.dump({
-            'id': str(client.key())
-        }, self.response)
+    _model = models.Client
 
 class APITicketHandler(_APIHandler):
-    def api_create(self):
-        args = self.response.arguments()
+    _model = models.Ticket
 
 #Delegating the various handlers to their respective paths
 app = webapp2.WSGIApplication([
     ('/', IndexHandler),
-    ('/ppk/(.*)', PPKHandler),
     ('/console', ConsoleHandler),
     ('/console/qr', QRHandler),
     ('/howmany', DummyHandler),
     ('/login', ConsoleLoginHandler),
     ('/cron/(\w+)', CronHandler),
     ('/api/session_(\w+)', SessionHandler),
+    ('/api/provider_(\w+)', APIProviderHandler),
     ('/api/client_(\w+)', APIClientHandler),
     ('/api/ticket_(\w+)', APITicketHandler)
     #('/api/', APIHandler)

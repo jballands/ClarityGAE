@@ -29,21 +29,12 @@ class Provider(db.Model):
     datetime_terminated = db.DateTimeProperty(required=False)
 
 class Session(db.Model):
-    token = db.StringProperty(required=False)
+    #token = db.StringProperty(required=False)
     creation = db.DateTimeProperty(auto_now_add=True)
     expiration = db.DateTimeProperty(required=False)
     user = db.ReferenceProperty(Provider, required=True)
     api = db.BooleanProperty(required=True)
-
-    closed = db.BooleanProperty(required=False)
-
-    def __init__(self, *args, **kwargs):
-        #kwargs['token'] = uuid.uuid4().hex
-        #kwargs['closed'] = False
-        db.Model.__init__(self, *args, **kwargs)
-        if not self.token:
-            self.token = uuid.uuid4().hex
-            self.closed = False
+    closed = db.BooleanProperty(required=False, default=False)
 
     def close(self):
         self.closed = True

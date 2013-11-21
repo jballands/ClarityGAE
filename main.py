@@ -167,7 +167,7 @@ class ConsoleLoginHandler(webapp2.RequestHandler):
             session.put()
             self.response.set_cookie(
                 'clarity-console-session',
-                value=session.token,
+                value=str(session.key()),
                 path='/',
                 #expires=datetime.datetime.now() + timeout
             )
@@ -270,8 +270,11 @@ class _APIHandler(webapp2.RequestHandler):
     def session_from_token(token):
         if not token: return None
 
-        session = models.Session.all().filter('token =', token).get()
-        if not session: return None
+        #session = models.Session.all().filter('token =', token).get()
+        try:
+            session = models.Session.get(token)
+        except db.BadKeyError:
+            return None
 
         if session.closed: return None
 
@@ -313,7 +316,7 @@ class SessionHandler(webapp2.RequestHandler):
         session.put()
 
         self.response.write(json.dumps({
-            'token': session.token,
+            'token': str(session.key()),
             'provider': {
                 'name_prefix': user.name_prefix,
                 'name_first': user.name_first,
@@ -329,7 +332,8 @@ class SessionHandler(webapp2.RequestHandler):
             self.error(404)
             return
 
-        session = session_get(token)
+        #session = session_get(token)
+        session = _APIHandler.session_from_token(token)
         if not session:
             self.error(403)
             return

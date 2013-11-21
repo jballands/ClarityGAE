@@ -224,6 +224,35 @@ class _APIHandler(webapp2.RequestHandler):
     post = route
     get = route
 
+    @staticmethod
+    def resolve_properties(instance):
+        out = {}
+        properties = instance.properties()
+        for name in properties:
+            out[name] = getattr(instance, name)
+        out["id"] = str(instance.key())
+        return out
+
+    @staticmethod
+    def session_from_token(token):
+        if not token: return None
+
+        #session = models.Session.all().filter('token =', token).get()
+        try:
+            session = models.Session.get(token)
+        except db.BadKeyError:
+            return None
+
+        if session.closed: return None
+
+        if datetime.datetime.utcnow() > session.expiration:
+            session.closed = True
+            session.put()
+            return None
+
+        return session
+
+class _APIModelHandler(_APIHandler):
     def api_create(self):
         valid = self._model.properties().keys()
         fields = {}
@@ -257,43 +286,8 @@ class _APIHandler(webapp2.RequestHandler):
                 return
             json.dump(self.resolve_properties(instance), self.response, skipkeys=True, cls=_APIEncoder)
 
-    @staticmethod
-    def resolve_properties(instance):
-        out = {}
-        properties = instance.properties()
-        for name in properties:
-            out[name] = getattr(instance, name)
-        out["id"] = str(instance.key())
-        return out
-
-    @staticmethod
-    def session_from_token(token):
-        if not token: return None
-
-        #session = models.Session.all().filter('token =', token).get()
-        try:
-            session = models.Session.get(token)
-        except db.BadKeyError:
-            return None
-
-        if session.closed: return None
-
-        if datetime.datetime.utcnow() > session.expiration:
-            session.closed = True
-            session.put()
-            return None
-
-        return session
-
-class SessionHandler(webapp2.RequestHandler):
-    def get(self, action):
-        function = 'session_' + action
-        if hasattr(self, function):
-            getattr(self, function)()
-        else:
-            self.error(404)
-
-    def session_begin(self):
+class APISessionHandler(_APIHandler):
+    def api_begin(self):
         username = self.request.get('username', '')
         password = self.request.get('password', '')
         api_session = not self.request.get('console', '')
@@ -326,7 +320,7 @@ class SessionHandler(webapp2.RequestHandler):
             }
         }))
 
-    def session_end(self):
+    def api_end(self):
         token = self.request.get('token', '')
         if not token:
             self.error(404)
@@ -341,13 +335,13 @@ class SessionHandler(webapp2.RequestHandler):
         session.closed = True
         session.put()
 
-class APIProviderHandler(_APIHandler):
+class APIProviderHandler(_APIModelHandler):
     _model = models.Provider
 
-class APIClientHandler(_APIHandler):
+class APIClientHandler(_APIModelHandler):
     _model = models.Client
 
-class APITicketHandler(_APIHandler):
+class APITicketHandler(_APIModelHandler):
     _model = models.Ticket
 
 #Delegating the various handlers to their respective paths
@@ -358,7 +352,7 @@ app = webapp2.WSGIApplication([
     ('/howmany', DummyHandler),
     ('/login', ConsoleLoginHandler),
     ('/cron/(\w+)', CronHandler),
-    ('/api/session_(\w+)', SessionHandler),
+    ('/api/session_(\w+)', APISessionHandler),
     ('/api/provider_(\w+)', APIProviderHandler),
     ('/api/client_(\w+)', APIClientHandler),
     ('/api/ticket_(\w+)', APITicketHandler)

@@ -337,8 +337,6 @@ class SessionHandler(webapp2.RequestHandler):
         session.closed = True
         session.put()
 
-        json.dump('big black cock', self.response) #Don't mind this
-
 class APIProviderHandler(_APIHandler):
     _model = models.Provider
 

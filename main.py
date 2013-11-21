@@ -117,10 +117,10 @@ class DummyHandler(webapp2.RequestHandler):
 
         self.response.write('New users inserted!')
 
-class PPKHandler(webapp2.RequestHandler):
-    def get(self, path):
-        self.response.headers['Content-Type'] = mimetypes.guess_type(path)[0]
-        self.response.write(_pool.read(path))
+# class PPKHandler(webapp2.RequestHandler):
+#     def get(self, path):
+#         self.response.headers['Content-Type'] = mimetypes.guess_type(path)[0]
+#         self.response.write(_pool.read(path))
 
 #Handler for logging in admins and providers
 #   -   I'll add more comments later because right now I'm too hungry and sleepy

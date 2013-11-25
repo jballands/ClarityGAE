@@ -1,10 +1,15 @@
 <html>
     <head>
         <title>Clarity Database Login</title>
-        <link rel="stylesheet" type="text/css" href="/metroui/css/modern.css" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet" media="screen">
         <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+        <script src="/static/js/bootstrap.min.js"></script>
+
+        <script src="/static/js/bootbox.min.js"></script>
     </head>
-    <body class="metrouicss">
+    <body>
+        <!--
         <center>
             <h2 class="padding80 bg-color-blue fg-color-white">Please login below</h2>
 
@@ -22,12 +27,69 @@
             </div>
 
         </center>
+        -->
+        <a href="/">
+            <div style="
+                width: 100%;
+                padding-top: 2em;
+                padding-bottom: 2em;
+                text-align:center;
+            ">
+                <img src="/static/image/ClarityIcon_blue.svg" style="height:8em;">
+            </div>
+        </a>
+
+        {% if request.get('error') == '403': %}
+        <div class="container">
+            <div class="alert alert-danger">
+                <span class="glyphicon glyphicon-warning-sign"></span> The username and/or password you entered were not found.
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="container">
+
+            <form id="loginform" action="/login" method="POST">
+                <h2 class="form-signin-heading">Please sign in</h2>
+                <input type="text" class="form-control" placeholder="Username" name="username" style="
+                    border-bottom-left-radius: 0;
+                    border-bottom-right-radius: 0;
+                " autofocus >
+                <input type="password" class="form-control" placeholder="Password" name="password" style="
+                    border-radius: 0;
+                " >
+                <button class="btn btn-lg btn-primary btn-block" type="submit" style="
+                    border-top-left-radius: 0;
+                    border-top-right-radius: 0;
+                ">Sign in</button>
+            </form>
+
+        </div>
+        
+        <div style="position:absolute;bottom:0px;">
+            Styled with <a href="http://metroui.org.ua">Metro UI CSS</a>
+        </div>
+
         <script type="text/javascript">
             $('button').click(function() {
                 var href = $(this).attr('href');
                 if(!href){return;}
                 window.location = href;
             });
+
+            /*function ajaxFail(request) {
+                //bootbox.alert('Error encountered trying to log in...')
+                bootbox.alert(request.status);
+            }
+
+            $('#loginform').submit(function() {
+                $.ajax('/login', {
+                    data: $(this).serialize(),
+                    dataType: 'json',
+                    type: 'POST'
+                }).fail(ajaxFail);
+                return false;
+            });*/
         </script>
     </body>
 </html>

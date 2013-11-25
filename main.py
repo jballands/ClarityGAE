@@ -209,12 +209,14 @@ class _APIDecoder(json.JSONDecoder):
 
 class _APIHandler(webapp2.RequestHandler):
     _model = object
+    _secure = True
 
     def route(self, action):
-        token = self.request.get('token', None)
-        if not self.session_from_token(token):
-            self.error(403)
-            return
+        if self._secure:
+            token = self.request.get('token', None)
+            if not self.session_from_token(token):
+                self.error(403)
+                return
 
         function = 'api_' + action
         if hasattr(self, function):
@@ -287,10 +289,13 @@ class _APIModelHandler(_APIHandler):
             json.dump(self.resolve_properties(instance), self.response, skipkeys=True, cls=_APIEncoder)
 
 class APISessionHandler(_APIHandler):
+    _secure = False
     def api_begin(self):
+        logging.info('wat')
         username = self.request.get('username', '')
         password = self.request.get('password', '')
         api_session = not self.request.get('console', '')
+        logging.info('USERNAME {0} PASSSWORD {1} CONSOLE? {2}'.format(username, password, api_session))
 
         user = models.Provider.all().filter('username =', username).get()
         if not user:

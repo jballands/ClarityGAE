@@ -78,7 +78,10 @@ class ConsoleHandler(webapp2.RequestHandler):
             self.redirect('/login')
             return
         values = {
-            'session': session
+            'session': session,
+            'userdict': APIEncoder().encode(
+                _APIModelHandler.resolve_properties(session.user)
+            )
         }
         self.response.write(JINJA('console.html').render(values))
 
@@ -188,7 +191,7 @@ class CronHandler(webapp2.RequestHandler):
             self.error(404)
             return
 
-class _APIEncoder(json.JSONEncoder):
+class APIEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, (datetime.datetime, datetime.date)):
             return str(obj)
@@ -231,6 +234,7 @@ class _APIHandler(webapp2.RequestHandler):
         out = {}
         properties = instance.properties()
         for name in properties:
+            if name == 'password': continue
             out[name] = getattr(instance, name)
         out["id"] = str(instance.key())
         return out
@@ -275,7 +279,7 @@ class _APIModelHandler(_APIHandler):
         args = self.request.arguments()
         if not 'id' in args:
             models = [self.resolve_properties(model) for model in self._model.all()]
-            json.dump(models, self.response, skipkeys=True, cls=_APIEncoder)
+            json.dump(models, self.response, skipkeys=True, cls=APIEncoder)
         else:
             instancekey = self.request.get('id')
             try:
@@ -286,7 +290,7 @@ class _APIModelHandler(_APIHandler):
             if not instance:
                 self.error(404)
                 return
-            json.dump(self.resolve_properties(instance), self.response, skipkeys=True, cls=_APIEncoder)
+            json.dump(self.resolve_properties(instance), self.response, skipkeys=True, cls=APIEncoder)
 
 class APISessionHandler(_APIHandler):
     _secure = False

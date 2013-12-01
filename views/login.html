@@ -15,25 +15,7 @@
                 background-image: url('/static/image/cubes_@2X.png');
             }
         </style>
-        <!--
-        <center>
-            <h2 class="padding80 bg-color-blue fg-color-white">Please login below</h2>
 
-            <form action="/login" method="post">
-                <input type="text" class="span6" placeholder="Username" required /><br>
-                <input type="password" class="span6" placeholder="Password" required /><br>
-
-                <button class="button default span6 bg-color-blueDark" type="submit">Submit</button><br>
-            </form>
-
-            <button class="button span6" type="button" href="{{adminlogin}}">Login with master account</button><br>
-
-            <div style="position:absolute;bottom:0px;">
-                Styled with <a href="http://metroui.org.ua">Metro UI CSS</a>
-            </div>
-
-        </center>
-        -->
         <a href="/">
             <div style="
                 width: 100%;
@@ -89,10 +71,11 @@
                     return
                 }
                 bootbox.alert('The password or username provided are invalid.');
+                $('#loginform').children().attr('disabled', false);
             }
 
             function loginComplete() {
-                $('#loginform').children().attr('disabled', false);
+                //$('#loginform').children().attr('disabled', false);
             }
 
             $('#loginform').submit(function() {

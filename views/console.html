@@ -8,8 +8,13 @@
     </head>
     <body>
         <script>
-            var session = '{{ session.key() }}'
-            var user = $.parseJSON('{{ userdict }}')
+            var session = '{{ session.key() }}';
+            var user = $.parseJSON('{{ encode(resolve(session.user)) }}');
+            var models = ['client', 'provider']
+            var properties = {
+                'client': $.parseJSON('{{ encode(models.Client.properties().keys()) }}'),
+                'provider': $.parseJSON('{{ encode(models.Provider.properties().keys()) }}')
+            };
         </script>
 
         <!-- NAVBAR START -->

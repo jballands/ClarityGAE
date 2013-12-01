@@ -32,7 +32,7 @@ JINJA = _jinja.get_template #To further simplify matters
 #Facilitates simpler redirection templating
 #   -   I use a redirection template so I can redirect with javascript
 #       and avoid form data conflicts that I've had in the past.    
-def REDIRECT(uri='/', time=2000, body=None):
+def REDIRECT(uri='/', time=1000, body=None):
     return _jinja.get_template('redirect.html').render({
         'uri': uri,
         'time': time,
@@ -79,54 +79,15 @@ class ConsoleHandler(webapp2.RequestHandler):
             return
         values = {
             'session': session,
-            'userdict': APIEncoder().encode(
-                _APIModelHandler.resolve_properties(session.user)
-            )
+            'resolve': _APIModelHandler.resolve_properties,
+            'encode': APIJSONEncoder().encode,
+            'models': models,
         }
         self.response.write(JINJA('console.html').render(values))
 
 class QRHandler(webapp2.RequestHandler):
     def get(self): pass
 
-class DummyHandler(webapp2.RequestHandler):
-    def post(self):
-        #self.redirect(blobstore.create_upload_url())
-        blob = models.Blobby()
-        blob.data = db.Blob(self.request.get('msg'))
-        blob.put()
-
-    def get(self):
-        models.Provider(
-            name_first='Samuel',
-            name_middle='Paige',
-            name_last='Gillispie',
-            name_suffix='II',
-
-            username='spgill',
-            password='5f4dcc3b5aa765d61d8327deb882cf99',
-
-            admin=True,
-        ).put()
-
-        models.Provider(
-            name_first='Jonathan',
-            name_last='Ballands',
-
-            username='jonathan',
-            password='5f4dcc3b5aa765d61d8327deb882cf99',
-
-            admin=True,
-        ).put()
-
-        self.response.write('New users inserted!')
-
-# class PPKHandler(webapp2.RequestHandler):
-#     def get(self, path):
-#         self.response.headers['Content-Type'] = mimetypes.guess_type(path)[0]
-#         self.response.write(_pool.read(path))
-
-#Handler for logging in admins and providers
-#   -   I'll add more comments later because right now I'm too hungry and sleepy
 class ConsoleLoginHandler(webapp2.RequestHandler):
     def get(self):
         session = _APIHandler.session_from_token(self.request.cookies.get('clarity-console-session', ''))
@@ -145,42 +106,6 @@ class ConsoleLoginHandler(webapp2.RequestHandler):
                 #self.response.write(_jinja.get_template('login.html').render(values))
                 self.response.write(JINJA('login.html').render(values))
 
-    def post(self):
-        username = self.request.get('username', None)
-        password = self.request.get('password', None)
-
-        if not (username or password):
-            self.error(403)
-            self.redirect('/login?error=403')
-            return
-
-        user = models.Provider.all().filter('username =', username).get()
-        if user:
-            digest = hashlib.md5(password).hexdigest()
-            if digest != user.password:
-                self.error(403)
-                self.redirect('/login?error=403')
-                return
-            timeout = datetime.timedelta(minutes=60)
-            session = models.Session(
-                user = user,
-                api = False
-            )
-            session.expiration = session.creation + timeout
-            session.put()
-            self.response.set_cookie(
-                'clarity-console-session',
-                value=str(session.key()),
-                path='/',
-                #expires=datetime.datetime.now() + timeout
-            )
-            logging.info('SUCCESS')
-            self.response.write(REDIRECT('/console'))
-        else:
-            self.error(403)
-            self.redirect('/login?error=403')
-            return
-
 class CronHandler(webapp2.RequestHandler):
     def get(self, action):
         if action == 'prune':
@@ -191,16 +116,21 @@ class CronHandler(webapp2.RequestHandler):
             self.error(404)
             return
 
-class APIEncoder(json.JSONEncoder):
+datetime_format = '%Y-%m-%d %H:%M:%S.%f'
+date_format = '%Y-%m-%d'
+
+class APIJSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, (datetime.datetime, datetime.date)):
+        if isinstance(obj, datetime.datetime):
+            return obj.strftime(datetime_format)
+        elif isinstance(obj, datetime.date):
+            return obj.strftime(date_format)
+        elif isinstance(obj, db.Key):
             return str(obj)
         else:
             return json.JSONEncoder.default(self, obj)
 
-datetime_format = '%Y-%m-%d %H:%M:%S.%f'
-date_format = '%Y-%m-%d'
-class _APIDecoder(json.JSONDecoder):
+class APIJSONDecoder(json.JSONDecoder):
     def decode(self, obj):
         result = None
         try:
@@ -211,15 +141,22 @@ class _APIDecoder(json.JSONDecoder):
         return json.JSONDecoder.decode(self, obj)
 
 class _APIHandler(webapp2.RequestHandler):
-    _model = object
     _secure = True
-
+    _elevated = False
     def route(self, action):
         if self._secure:
             token = self.request.get('token', None)
-            if not self.session_from_token(token):
+            session = self.session_from_token(token)
+            if not session or (self._elevated and not session.user.admin):
                 self.error(403)
                 return
+
+        arguments = self.request.arguments()
+        self.args = {}
+        for argument in arguments:
+            self.args[argument] = self.argDecode(argument, self.request.get(argument))
+
+        logging.info('ARGS ' + repr(self.args))
 
         function = 'api_' + action
         if hasattr(self, function):
@@ -230,13 +167,23 @@ class _APIHandler(webapp2.RequestHandler):
     get = route
 
     @staticmethod
+    def argDecode(key, value):
+        if key == 'password':
+            return hashlib.md5(value).hexdigest()
+        if value == 'true':
+            return True
+        if value == 'false':
+            return False
+        return value
+
+    @staticmethod
     def resolve_properties(instance):
         out = {}
         properties = instance.properties()
         for name in properties:
             if name == 'password': continue
             out[name] = getattr(instance, name)
-        out["id"] = str(instance.key())
+        out["id"] = instance.key()
         return out
 
     @staticmethod
@@ -258,7 +205,11 @@ class _APIHandler(webapp2.RequestHandler):
 
         return session
 
+    def session(self):
+        return self.session_from_token(self.request.get('token', ''))
+
 class _APIModelHandler(_APIHandler):
+    _model = object
     def api_create(self):
         valid = self._model.properties().keys()
         fields = {}
@@ -266,40 +217,83 @@ class _APIModelHandler(_APIHandler):
         for arg in args:
             if arg == 'token': continue
             if not arg in valid:
+                logging.info('MISSING ' + arg)
                 self.error(401)
                 return
-            fields[arg] = self.request.get(arg)
+            value = self.request.get(arg)
+            if arg == 'password':
+                value = hashlib.md5(value).hexdigest()
+            elif arg == 'admin':
+                value = True if value == 'true' else False
+            fields[arg] = value
         instance = self._model(**fields)
         instance.put()
         json.dump({
-            'id': str(instance.key())
-        }, self.response)
+            'id': instance.key()
+        }, self.response, cls=APIJSONEncoder)
 
     def api_get(self):
         args = self.request.arguments()
-        if not 'id' in args:
-            models = [self.resolve_properties(model) for model in self._model.all()]
-            json.dump(models, self.response, skipkeys=True, cls=APIEncoder)
-        else:
+        data = None
+        if 'id' in args:
             instancekey = self.request.get('id')
             try:
                 instance = self._model.get(instancekey)
-            except db.BadKeyError, db.KindError:
+            except db.BadKeyError:
                 self.error(404)
                 return
-            if not instance:
-                self.error(404)
+            except db.KindError:
+                self.error(401)
                 return
-            json.dump(self.resolve_properties(instance), self.response, skipkeys=True, cls=APIEncoder)
+            data = self.resolve_properties(instance)
+        elif 'ids' in args:
+            data = []
+            try:
+                keylist = json.loads(self.request.get('ids'))
+            except ValueError:
+                self.error(401)
+                return
+            for key in keylist:
+                try:
+                    instance = self._model.get(key)
+                    data.append(self.resolve_properties(instance))
+                except:
+                    data.append(None)
+        else:
+            nolimit = self.request.get('nolimit', '') == 'true'
+            runlimit = 100
+            if nolimit:
+                runlimit = None
+            data = [self.resolve_properties(model) for model in self._model.all().run(limit=runlimit)]
+            #json.dump(models, self.response, skipkeys=True, cls=APIJSONEncoder)
+        json.dump(data, self.response, skipkeys=True, cls=APIJSONEncoder)
+
+    def api_query(self):
+        valid = self._model.properties().keys()
+        args = self.request.arguments()
+        args.remove('token')
+        if not args:
+            self.error(401)
+            return
+        query = self._model.all()
+        for arg in args:
+            if not arg in valid:
+                self.error(401)
+                return
+            query = query.filter(arg + ' =', self.request.get(arg, ''))
+        # if not query.get():
+        #     self.error(404)
+        #     return
+        json.dump(
+            [self.resolve_properties(instance) for instance in query],
+        self.response, skipkeys=True, cls=APIJSONEncoder)
 
 class APISessionHandler(_APIHandler):
     _secure = False
     def api_begin(self):
-        logging.info('wat')
         username = self.request.get('username', '')
         password = self.request.get('password', '')
         api_session = not self.request.get('console', '')
-        logging.info('USERNAME {0} PASSSWORD {1} CONSOLE? {2}'.format(username, password, api_session))
 
         user = models.Provider.all().filter('username =', username).get()
         if not user:
@@ -345,28 +339,24 @@ class APISessionHandler(_APIHandler):
         session.put()
 
 class APIProviderHandler(_APIModelHandler):
+    _elevated = True
     _model = models.Provider
 
 class APIClientHandler(_APIModelHandler):
     _model = models.Client
 
 class APITicketHandler(_APIModelHandler):
-    _model = models.Ticket
+    _model = models.Ticket        
 
 #Delegating the various handlers to their respective paths
 app = webapp2.WSGIApplication([
     ('/', IndexHandler),
     ('/console', ConsoleHandler),
     ('/console/qr', QRHandler),
-    ('/howmany', DummyHandler),
     ('/login', ConsoleLoginHandler),
     ('/cron/(\w+)', CronHandler),
     ('/api/session_(\w+)', APISessionHandler),
     ('/api/provider_(\w+)', APIProviderHandler),
     ('/api/client_(\w+)', APIClientHandler),
-    ('/api/ticket_(\w+)', APITicketHandler)
-    #('/api/', APIHandler)
-    #('/login', LoginHandler),
-    #('/debug', DebugHandler),
-    #(r'/db', DBHandler),
+    ('/api/ticket_(\w+)', APITicketHandler),
 ], debug=True)

@@ -1,0 +1,23 @@
+@-webkit-keyframes loaderSprite {
+    from { background-position: 0px; }
+    to { background-position: -15360px; }
+}
+
+@-moz-keyframes loaderSprite {
+    from { background-position: 0px; }
+    to { background-position: -15360px; }
+}
+
+@keyframes loaderSprite {
+    from { background-position: 0px; }
+    to { background-position: -15360px; }
+}
+
+.loader {
+    width: 128px;
+    height: 128px;
+    background-image: url("/static/image/loader_sprite.png");
+    -webkit-animation: loaderSprite 1.2s steps(120, end) infinite;
+    -moz-animation: loaderSprite 1.2s steps(120, end) infinite;
+    animation: loaderSprite 1.2s steps(120, end) infinite;
+}

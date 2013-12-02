@@ -1,0 +1,37 @@
+<div class="container">
+    <h1>QR Label Generator</h1>
+
+    <label>Presets</label>
+
+    {% macro genbutton(amount) -%}
+    <p>
+        <a class="btn btn-primary btn-block qr-genbutton" amount="{{ amount }}" href="/console/qr?amount={{ amount }}" target="_blank">Generate {{ amount }}</a>
+    </p>
+    {%- endmacro %}
+
+    {{ genbutton(25) }}
+    {{ genbutton(100) }}
+    {{ genbutton(250) }}
+    {{ genbutton(500) }}
+
+    <hr>
+
+    <label>Custom</label>
+    <input type="text" class="form-control" placeholder="Amount" id="qr-custominput" style="
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    ">
+    <button class="btn btn-primary btn-block" id="qr-custombutton" style="
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    ">Generate</button>
+
+</div>
+
+<script>
+    $('#qr-custombutton').click(function() {
+        var amount = $('#qr-custominput').val();
+        if(!amount){return;}
+        open('/console/qr?amount=' + amount);
+    });
+</script>

@@ -6,6 +6,7 @@ import base64
 import random
 import hashlib
 import logging
+import urllib2
 import datetime
 import mimetypes
 
@@ -15,6 +16,8 @@ import jinja2
 from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import blobstore
+
+import ho.pisa as pisa
 
 import models
 
@@ -85,8 +88,24 @@ class ConsoleHandler(webapp2.RequestHandler):
         }
         self.response.write(JINJA('console.html').render(values))
 
+def qr_link_callback(uri, rel):
+    #if uri.find('google') != -1:
+        #url = "%s?%s" % (settings.GOOGLE_CHART_URL, uri)
+    return urllib2.urlopen(uri).read()
+    #return uri
+
 class QRHandler(webapp2.RequestHandler):
-    def get(self): pass
+    def get(self):
+        makepdf = self.request.get('pdf', '') == 'true'
+        markup = JINJA('qr.html').render({
+            'amount': int(self.request.get('amount', 0)),
+            'uuid': uuid
+        })
+        if makepdf:
+            self.response.headers['Content-Type'] = 'application/pdf'
+            pisa.CreatePDF(markup, self.response, link_callback=qr_link_callback)
+        else:
+            self.response.write(markup)
 
 class ConsoleLoginHandler(webapp2.RequestHandler):
     def get(self):

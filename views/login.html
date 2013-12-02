@@ -14,28 +14,16 @@
             body {
                 background-image: url('/static/image/cubes_@2X.png');
             }
+            div.img {
+                text-align: center;
+                margin: 2em 0 2em;
+            }
         </style>
 
-        <a href="/">
-            <div style="
-                width: 100%;
-                padding-top: 2em;
-                padding-bottom: 2em;
-                text-align:center;
-            ">
-                <img src="/static/image/ClarityIcon_blue.svg" style="height:8em;">
-            </div>
-        </a>
-
-        {% if request.get('error') == '403': %}
         <div class="container">
-            <div class="alert alert-danger">
-                <span class="glyphicon glyphicon-warning-sign"></span> The username and/or password you entered were not found.
+            <div class="img">
+                <img src="/static/image/ClarityIcon_blue.svg" style="height:8em;" class="centered">
             </div>
-        </div>
-        {% endif %}
-
-        <div class="container">
 
             <form id="loginform">
                 <h2 class="form-signin-heading">Please log in below</h2>

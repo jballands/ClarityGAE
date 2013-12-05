@@ -14,30 +14,27 @@
             }
         </style>
 
-        <div style="
-            width:100%;
-            height:100%;
-        ">
         <div class="container">
             <div class="img">
-                <img src="/static/image/ClarityIcon_blue.svg" style="height: 19%;" class="centered">
+                <img src="/static/image/ClarityIcon_blue.svg" style="height:8em;" class="centered">
             </div>
 
-            <form id="loginform" class="form-horizontal">
+            <form id="loginform">
                 <h2 class="form-signin-heading">Please log in below</h2>
-                <div class="form-group">
-                    <input type="text" class="form-control" placeholder="Username" name="username" autofocus required>
-                </div>
-                <div class="form-group">
-                    <input type="password" class="form-control" placeholder="Password" name="password" required>
-                </div>
-                <div class="form-group">
-                    <button class="btn btn-lg btn-primary btn-block" type="submit">Submit</button>
-                </div>
+                <input type="text" class="form-control" placeholder="Username" name="username" style="
+                    border-bottom-left-radius: 0;
+                    border-bottom-right-radius: 0;
+                " autofocus required>
+                <input type="password" class="form-control" placeholder="Password" name="password" style="
+                    border-radius: 0;
+                " required>
+                <button class="btn btn-lg btn-primary btn-block" type="submit" style="
+                    border-top-left-radius: 0;
+                    border-top-right-radius: 0;
+                ">Submit</button>
                 <input type="text" name="console" value="true" hidden>
             </form>
 
-        </div>
         </div>
 
         <script type="text/javascript">
@@ -51,7 +48,7 @@
                     bootbox.alert('Oops! Your login request timed out; try again.');
                     return
                 }
-                bootbox.alert('The password and/or username provided are invalid.');
+                bootbox.alert('The password or username provided are invalid.');
                 $('#loginform').children().attr('disabled', false);
             }
 

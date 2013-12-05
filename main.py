@@ -17,8 +17,6 @@ from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 
-import ho.pisa as pisa
-
 import models
 
 _path = os.path.dirname(__file__) or os.getcwd() #Guaranteed current directory
@@ -214,6 +212,8 @@ class _APIHandler(webapp2.RequestHandler):
             session = models.Session.get(token)
         except db.BadKeyError:
             return None
+
+        if not session: return None
 
         if session.closed: return None
 

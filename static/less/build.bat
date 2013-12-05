@@ -1,0 +1,1 @@
+..\..\lessc\lessc --clean-css bootstrap.less "..\css\bootstrap.min.css"

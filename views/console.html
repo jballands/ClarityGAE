@@ -2,15 +2,23 @@
     <head>
         <title>Clarity Database Console</title>
         {% include '_header.html' %}
+        <link href="/static/css/bootstrap-editable.css" rel="stylesheet">
+        <script src="/static/js/bootstrap-editable.min.js"></script>
+
+        <script src="/static/js/string.format.js"></script>
     </head>
     <body>
         <script>
             var session = '{{ session.key() }}';
             var user = $.parseJSON('{{ encode(resolve(session.user)) }}');
             var models = ['client', 'provider']
-            var properties = {
-                'client': $.parseJSON('{{ encode(models.Client.properties().keys()) }}'),
-                'provider': $.parseJSON('{{ encode(models.Provider.properties().keys()) }}')
+            var modelNames = {
+                'client': 'Clients',
+                'provider': 'Providers'
+            }
+            var modelProperties = {
+                'client': $.parseJSON('{{ encode(["id",] + models.Client.properties().keys()) }}'),
+                'provider': $.parseJSON('{{ encode(["id",] + models.Provider.properties().keys()) }}')
             };
         </script>
 

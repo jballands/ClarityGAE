@@ -20,7 +20,7 @@
         <div class="progress-bar"  role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100" style="width: 0%;" id="data_progressBar">
         </div>
     </div>
-    <table class="table table-striped table-bordered" id="data_table">
+    <table class="table table-striped table-bordered table-hover table-condensed" id="data_table">
         <thead id="data_tableHead">
         </thead>
         <tbody id="data_tableBody">
@@ -52,19 +52,24 @@
         var properties = modelProperties[currentModel];
         for (i in data) {
             var instance = data[i];
-            var row = '<tr>';
+            tableBody.append(String.format('<tr id="{0}"></tr>', instance['id']));
+            var row = $('#' + instance['id']);
+
             for (j in properties) {
-                var property = properties[j];
-                var value = instance[property];
-                //if (property == 'id') {
-                    row += String.format('<td>{0}</td>', value);
-                /*}
+                var key = properties[j];
+                var value = instance[key];
+                var valuetype = typeof value;
+                var entry = ''
+
+                //alert(valuetype);
+                if (key == 'id') {
+                    entry = String.format('<td>{0}</td>', value);
+                }
                 else {
-                    row += String.format('<td><a href="#" class="data_tableElement" data-type="text" data-name="{0}">{1}</a></td>', property, value);
-                }*/
+                    entry = String.format('<td><a href="#" class="data_tableElement" data-type="text" data-name="{0}">{1}</a></td>', key, value);
+                }
+                $(entry).appendTo(row);
             }
-            row += '</tr>';
-            tableBody.append(row);
         }
         $('.data_tableElement').editable();
     }

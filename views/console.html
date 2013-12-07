@@ -17,8 +17,30 @@
                 'provider': 'Providers'
             }
             var modelProperties = {
-                'client': $.parseJSON('{{ encode(["id",] + models.Client.properties().keys()) }}'),
-                'provider': $.parseJSON('{{ encode(["id",] + models.Provider.properties().keys()) }}')
+                //'client': $.parseJSON('{{ encode(["id",] + models.Client.properties().keys()) }}'),
+                //'provider': $.parseJSON('{{ encode(["id",] + models.Provider.properties().keys()) }}')
+                'provider': [
+                    'id',
+                    'name_prefix',
+                    'name_first',
+                    'name_middle',
+                    'name_last',
+                    'name_suffix',
+                    'username',
+                    'password',
+                    'admin',
+                ],
+                'client': [
+                    'id',
+                    'name_prefix',
+                    'name_first',
+                    'name_middle',
+                    'name_last',
+                    'name_suffix',
+                    'dateofbirth',
+                    'sex',
+                    'location'
+                ]
             };
         </script>
 

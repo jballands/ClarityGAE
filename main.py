@@ -169,9 +169,13 @@ class _APIHandler(webapp2.RequestHandler):
                 return
 
         arguments = self.request.arguments()
+
         self.args = {}
+        
         for argument in arguments:
             self.args[argument] = self.argDecode(argument, self.request.get(argument))
+        if 'pk' in arguments:
+            self.args['value'] = self.argDecode(self.args['name'], self.args['value'])
 
         logging.info('ARGS ' + repr(self.args))
 
@@ -306,6 +310,29 @@ class _APIModelHandler(_APIHandler):
         json.dump(
             [self.resolve_properties(instance) for instance in query],
         self.response, skipkeys=True, cls=APIJSONEncoder)
+
+    def api_consoleupdate(self):
+        args = self.args
+        instancekey = args['pk']
+
+        try:
+            instance = self._model.get(instancekey)
+        except db.BadKeyError:
+            self.error(404)
+            return
+        except db.KindError:
+            self.error(401)
+            return
+
+        prop = args['name']
+        value = args['value']
+
+        if not prop in self._model.properties().keys():
+            self.error(401)
+            return
+
+        setattr(instance, prop, value)
+        instance.put()
 
 class APISessionHandler(_APIHandler):
     _secure = False

@@ -5,7 +5,11 @@
     </head>
     <body>
         {% macro qr(data, size=512) -%}
-            <img src="https://chart.googleapis.com/chart?chs={{ size }}x{{ size }}&cht=qr&chl={{ data }}">
+            {% for x in range(5) %}
+                <td>
+                    <img src="https://chart.googleapis.com/chart?chs={{ size }}x{{ size }}&cht=qr&chl={{ data }}">
+                </td>
+            {% endfor %}
         {%- endmacro %}
 
         <style type="text/css">
@@ -21,13 +25,10 @@
         </style>
 
         <table class="table">
-            {% for y in range(amount // 5) %}
+            {% for y in range(amount) %}
                 <tr>
-                {% for x in range(5) %}
-                    <td>
-                        {{ qr('clarity' + uuid.uuid4().hex) }}
-                    </td>
-                {% endfor %}
+                    <td><h3><em>{{ y + 1 }}</em></h3></td>
+                    {{ qr('clarity' + uuid.uuid4().hex) }}
                 </tr>
             {% endfor %}
         </table>

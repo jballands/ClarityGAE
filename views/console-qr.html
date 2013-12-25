@@ -1,12 +1,14 @@
 <div class="tab-pane fade" id="tab-qr">
     <div class="container">
         <h1>QR Label Generator</h1>
+        
+        <p>Generates rows of five indentical QR labels specifically designed for use with the Clarity Android app.</p>
 
         <label>Presets</label>
 
         {% macro genbutton(amount) -%}
         <p>
-            <a class="btn btn-primary btn-block qr-genbutton" amount="{{ amount }}" href="/console/qr?amount={{ amount }}" target="_blank">Generate {{ amount }}</a>
+            <a class="btn btn-primary btn-block qr-genbutton" amount="{{ amount }}" href="/console/qr?amount={{ amount }}" target="_blank">Generate {{ amount }} rows</a>
         </p>
         {%- endmacro %}
 
@@ -18,7 +20,7 @@
         <hr>
 
         <label>Custom</label>
-        <input type="text" class="form-control" placeholder="Amount" id="qr-custominput" style="
+        <input type="text" class="form-control" placeholder="Number of Rows" id="qr-custominput" style="
             border-bottom-left-radius: 0;
             border-bottom-right-radius: 0;
         ">

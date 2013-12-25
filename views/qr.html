@@ -4,10 +4,13 @@
         {% include '_header.html' %}
     </head>
     <body>
-        {% macro qr(data, size=512) -%}
+        {% macro qr_row(data, i) -%}
+            <td>
+                <h1 class="text-muted"><em>{{ i + 1 }}</em></h1>
+            </td>
             {% for x in range(5) %}
                 <td>
-                    <img src="https://chart.googleapis.com/chart?chs={{ size }}x{{ size }}&cht=qr&chl={{ data }}">
+                    <img class="large" src="https://chart.googleapis.com/chart?chs=512x512&cht=qr&chl={{ 'clarity' + data }}">
                 </td>
             {% endfor %}
         {%- endmacro %}
@@ -16,8 +19,11 @@
             table {
                 text-align: center;
             }
-            img {
+            img.large {
                 width: 100%;
+            }
+            img.small {
+                width: 4em;
             }
             table { page-break-after:auto }
             tr    { page-break-inside:avoid; page-break-after:auto }
@@ -27,15 +33,14 @@
         <table class="table">
             {% for y in range(amount) %}
                 <tr>
-                    <td><h3><em>{{ y + 1 }}</em></h3></td>
-                    {{ qr('clarity' + uuid.uuid4().hex) }}
+                    {{ qr_row(uuid.uuid4().hex, y) }}
                 </tr>
             {% endfor %}
         </table>
 
         <script type="text/javascript">
             $(document).ready(function() {
-                window.print();
+                //window.print();
             });
         </script>
     </body>

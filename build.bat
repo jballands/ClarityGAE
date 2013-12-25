@@ -1,0 +1,1 @@
+lessc --clean-css static/less/bootstrap.less /statis/css/boostrap.min.css

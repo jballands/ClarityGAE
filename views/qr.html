@@ -1,39 +1,51 @@
 <html>
     <head>
         <title>QR Label Sheet</title>
-        {% include '_header.html' %}
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet" media="screen, print">
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+        <script src="/static/js/qr.min.js"></script>
     </head>
     <body>
-        {% macro qr(data, size=512) -%}
-            <img src="https://chart.googleapis.com/chart?chs={{ size }}x{{ size }}&cht=qr&chl={{ data }}">
+        {% macro qr_row(data, i) -%}
+            <td>
+                <h1 class="text-muted"><em>{{ i + 1 }}</em></h1>
+            </td>
+            {% for x in range(5) %}
+                <td>
+                    <img class="largeqr" data="{{ data }}">
+                </td>
+            {% endfor %}
         {%- endmacro %}
 
-        <style type="text/css">
-            table {
-                text-align: center;
-            }
-            img {
+        <style>
+            .largeqr {
                 width: 100%;
+                height: auto;
+                padding: 10%;
             }
-            table { page-break-after:auto }
-            tr    { page-break-inside:avoid; page-break-after:auto }
-            td    { page-break-inside:avoid; page-break-after:auto }
+            table { page-break-after:auto; text-align: center; }
+            tr    { page-break-inside:avoid; page-break-after:auto; }
+            td    { page-break-inside:avoid; page-break-after:auto; }
         </style>
 
         <table class="table">
-            {% for y in range(amount // 5) %}
+            {% for y in range(amount) %}
                 <tr>
-                {% for x in range(5) %}
-                    <td>
-                        {{ qr('clarity' + uuid.uuid4().hex) }}
-                    </td>
-                {% endfor %}
+                    {{ qr_row(uuid.uuid4().hex, y) }}
                 </tr>
             {% endfor %}
         </table>
 
-        <script type="text/javascript">
+        <script type="text/javascript">            
             $(document).ready(function() {
+                $('.largeqr').each(function() {
+                    qr.image({
+                        image: this,
+                        value: $(this).attr('data'),
+                        size: 10
+                    });
+                });
+                
                 window.print();
             });
         </script>

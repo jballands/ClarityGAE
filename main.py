@@ -97,7 +97,9 @@ class QRHandler(webapp2.RequestHandler):
         makepdf = self.request.get('pdf', '') == 'true'
         markup = JINJA('qr.html').render({
             'amount': int(self.request.get('amount', 0)),
-            'uuid': uuid
+            'uuid': uuid,
+            'i': 0,
+            'script': ''
         })
         if makepdf:
             self.response.headers['Content-Type'] = 'application/pdf'

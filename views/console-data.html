@@ -59,13 +59,20 @@
             var row = $('#' + instance['id']);
 
             for (j in properties) {
-                var key = properties[j];
+                var key = properties[j][0];
+                var type = properties[j][1];
                 var value = instance[key];
                 var valuetype = typeof value;
                 var cell = $('<td></td>').appendTo(row);
 
                 if (key == 'id') {
-                    cell.append(value);
+                    var entry = $(String.format('<input type="text" class="data_tableID" value="{0}" readonly></input>', value)).appendTo(cell);
+                    entry.css('width', '100%');
+                    entry.popover({
+                        'placement': 'top',
+                        'trigger': 'hover',
+                        'content': 'Left-click once to select the ID, then Ctrl-C to copy it to clipboard'
+                    });
                 }
                 else {
                     editor = $('<a href="#" class="data_tableElement"></a>').appendTo(cell);
@@ -91,8 +98,13 @@
                 }
             }
         }
+
         $('.data_tableElement').editable({
             'url': String.format('/api/{0}_consoleupdate?token={1}', currentModel, session)
+        });
+
+        $('.data_tableID').click(function() {
+            $(this).select();
         });
     }
 
@@ -113,7 +125,7 @@
         var head = '';
 
         for (i in properties) {
-            var property = properties[i];
+            var property = properties[i][0];
             head += String.format('<td><strong>{0}</strong></td>', property.toUpperCase());
         }
 

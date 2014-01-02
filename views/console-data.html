@@ -125,7 +125,9 @@
                             break;
                         case 'textarea':
                             options['display'] = function(value, sourceData) {
-                                $(this).text('. . .');
+                                if (value.length > 0) {
+                                    $(this).text('. . .');
+                                }
                             };
                     }
 

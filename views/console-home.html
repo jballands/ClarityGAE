@@ -5,13 +5,13 @@
         text-align: center;
     ">
 
-    <h4 style="
+    <!--<h4 style="
         position: absolute;
         top: 0;
         left: 115;
     ">
         <span class="glyphicon glyphicon-arrow-up"></span> Use the tabs to navigate
-    </h4>
+    </h4>-->
 
         <a href="/">
             <img src="/static/image/ClarityLogo_blue.svg" style="
@@ -22,4 +22,15 @@
                 top: 0; left: 0; bottom: 0; right: 0;
             ">
         </a>
+    <script>
+        var tooltip = $('#tab-data-button').tooltip({
+            'title': 'Use the tabs to navigate',
+            'placement': 'bottom',
+            'trigger': 'manual'
+        });
+        tooltip.tooltip('show');
+        $('.nav-tabs').click(function() {
+            tooltip.tooltip('hide');
+        });
+    </script>
 </div>

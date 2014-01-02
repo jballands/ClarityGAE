@@ -16,28 +16,30 @@
                 'client': 'Clients',
                 'provider': 'Providers'
             }
+            var namePrefixes = ['', 'Ms.', 'Mrs.', 'Mr.', 'Rev.', 'Dr.'];
+            var nameSuffixes = ['', 'I', 'II', 'III', 'IV', 'V', 'Jr.', 'Sr.', 'Esq.'];
             var modelProperties = {
                 'provider': [
-                    ['id', String],
-                    ['name_prefix', String],
-                    ['name_first', String],
-                    ['name_middle', String],
-                    ['name_last', String],
-                    ['name_suffix', String],
-                    ['username', String],
-                    ['password', String],
-                    ['admin', String],
+                    ['id',              'null',         null,                   null],
+                    ['name_prefix',     'select',       namePrefixes,           true],
+                    ['name_first',      'text',         null,                   true],
+                    ['name_middle',     'text',         null,                   false],
+                    ['name_last',       'text',         null,                   true],
+                    ['name_suffix',     'select',       nameSuffixes,           false],
+                    ['username',        'text',         null,                   true],
+                    ['password',        'password',     null,                   true],
+                    ['admin',           'select',       ['true', 'false'],      true],
                 ],
                 'client': [
-                    ['id', String],
-                    ['name_prefix', String],
-                    ['name_first', String],
-                    ['name_middle', String],
-                    ['name_last', String],
-                    ['name_suffix', String],
-                    ['dateofbirth', String],
-                    ['sex', String],
-                    ['location', String],
+                    ['id',              'null',         null,                   null],
+                    ['name_prefix',     'select',       namePrefixes,           true],
+                    ['name_first',      'text',         null,                   true],
+                    ['name_middle',     'text',         null,                   false],
+                    ['name_last',       'text',         null,                   true],
+                    ['name_suffix',     'select',       nameSuffixes,           false],
+                    ['dateofbirth',     'date',         null,                   true],
+                    ['sex',             'select',       ['female', 'male'],     true],
+                    ['location',        'textarea',     null,                   false],
                 ]
             };
         </script>
@@ -45,7 +47,7 @@
         <!-- NAVBAR START -->
         <ul class="nav nav-tabs" style="background-image:url('/static/image/cubes.png');">
             <li class="active"><a href="#tab-home" data-toggle="tab">Home</a></li>
-            <li><a href="#tab-data" data-toggle="tab">View Data</a></li>
+            <li><a href="#tab-data" id="tab-data-button" data-toggle="tab">View Data</a></li>
             <li><a href="#tab-qr" data-toggle="tab">QR Generator</a></li>
 
             <li class="dropdown pull-right">

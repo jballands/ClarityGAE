@@ -78,6 +78,10 @@ class ConsoleHandler(webapp2.RequestHandler):
         if not session:
             self.redirect('/login')
             return
+        if not session.user.admin:
+            self.error(403)
+            self.response.write(JINJA('console-403.html').render())
+            return
         values = {
             'session': session,
             'resolve': _APIModelHandler.resolve_properties,

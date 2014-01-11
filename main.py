@@ -33,11 +33,10 @@ JINJA = _jinja.get_template #To further simplify matters
 #Facilitates simpler redirection templating
 #   -   I use a redirection template so I can redirect with javascript
 #       and avoid form data conflicts that I've had in the past.    
-def REDIRECT(uri='/', time=1000, body=None):
+def REDIRECT(uri='/', time=1000):
     return _jinja.get_template('redirect.html').render({
         'uri': uri,
         'time': time,
-        'body': body
     })
 
 def user_get(instance):

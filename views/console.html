@@ -5,34 +5,39 @@
         <link href="/static/css/bootstrap-editable.css" rel="stylesheet">
         <script src="/static/js/bootstrap-editable.min.js"></script>
 
+        <link href="/static/css/bootstrap-datetimepicker.min.css" rel="stylesheet" type="text/css"></link> 
+        <script src="/static/js/bootstrap-datetimepicker.min.js"></script>
+
         <script src="/static/js/string.format.js"></script>
     </head>
     <body>
         <script>
             var session = '{{ session.key() }}';
             var user = $.parseJSON('{{ encode(resolve(session.user)) }}');
-            var models = ['client', 'provider']
+            var models = ['client', 'provider', 'ticket']
             var modelNames = {
                 'client': 'Clients',
-                'provider': 'Providers'
+                'provider': 'Providers',
+                'ticket': 'Tickets',
             }
             var namePrefixes = ['', 'Ms.', 'Mrs.', 'Mr.', 'Rev.', 'Dr.'];
             var nameSuffixes = ['', 'I', 'II', 'III', 'IV', 'V', 'Jr.', 'Sr.', 'Esq.'];
+            var truefalse = ['true', 'false'];
             var modelProperties = {
                 'provider': [
                     ['id',              'null',         null,                   null],
-                    ['name_prefix',     'select',       namePrefixes,           true],
+                    ['name_prefix',     'select',       namePrefixes,           false],
                     ['name_first',      'text',         null,                   true],
                     ['name_middle',     'text',         null,                   false],
                     ['name_last',       'text',         null,                   true],
                     ['name_suffix',     'select',       nameSuffixes,           false],
                     ['username',        'text',         null,                   true],
                     ['password',        'password',     null,                   true],
-                    ['admin',           'select',       ['true', 'false'],      true],
+                    ['admin',           'select',       truefalse,              true],
                 ],
                 'client': [
                     ['id',              'null',         null,                   null],
-                    ['name_prefix',     'select',       namePrefixes,           true],
+                    ['name_prefix',     'select',       namePrefixes,           false],
                     ['name_first',      'text',         null,                   true],
                     ['name_middle',     'text',         null,                   false],
                     ['name_last',       'text',         null,                   true],
@@ -40,7 +45,15 @@
                     ['dateofbirth',     'date',         null,                   true],
                     ['sex',             'select',       ['female', 'male'],     true],
                     ['location',        'textarea',     null,                   false],
-                ]
+                ],
+                'ticket': [
+                    ['id',              'null',         null,                   null],
+                    ['qrcode',          'text',         null,                   null],
+                    ['client',          'model',        null,                   true],
+                    ['isopen',          'select',       truefalse,              false],
+                    ['opened',          'datetime',     null,                   null],
+                    ['closed',          'datetime',     null,                   null],
+                ],
             };
         </script>
 

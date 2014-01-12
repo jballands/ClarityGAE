@@ -138,8 +138,16 @@ class CronHandler(webapp2.RequestHandler):
             self.error(404)
             return
 
-datetime_format = '%Y-%m-%d %H:%M:%S.%f'
+datetime_format = '%Y-%m-%d %H:%M:%S'
 date_format = '%Y-%m-%d'
+
+def stripDateAndOrTime(string):
+    for format in [datetime_format, date_format]:
+        try:
+            result = datetime.datetime.strptime(string, format)
+            return result
+        except: pass
+    return None
 
 class APIJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -149,6 +157,8 @@ class APIJSONEncoder(json.JSONEncoder):
             return obj.strftime(date_format)
         elif isinstance(obj, db.Key):
             return str(obj)
+        elif isinstance(obj, db.Model):
+            return _APIHandler.resolve_properties(obj)
         else:
             return json.JSONEncoder.default(self, obj)
 
@@ -182,8 +192,6 @@ class _APIHandler(webapp2.RequestHandler):
         if 'pk' in arguments:
             self.args['value'] = self.argDecode(self.args['name'], self.args['value'])
 
-        logging.info('ARGS ' + repr(self.args))
-
         function = 'api_' + action
         if hasattr(self, function):
             getattr(self, function)()
@@ -196,10 +204,17 @@ class _APIHandler(webapp2.RequestHandler):
     def argDecode(key, value):
         if key == 'password':
             return hashlib.md5(value).hexdigest()
+        if key == 'qrcode':
+            return value if re.match(r'clarity[a-f0-9]{32}$', value) is not None else None
+
         if value == 'true':
             return True
         if value == 'false':
             return False
+
+        time = stripDateAndOrTime(value)
+        if time: return time
+
         return value
 
     @staticmethod
@@ -208,7 +223,10 @@ class _APIHandler(webapp2.RequestHandler):
         properties = instance.properties()
         for name in properties:
             if name == 'password': continue
-            out[name] = getattr(instance, name)
+            try:
+                out[name] = getattr(instance, name)
+            except db.ReferencePropertyResolveError:
+                return []
         out["id"] = instance.key()
         return out
 
@@ -239,17 +257,28 @@ class _APIHandler(webapp2.RequestHandler):
 class _APIModelHandler(_APIHandler):
     _model = object
     def api_create(self):
-        valid = self._model.properties().keys()
+        properties = self._model.properties()
+        valid = properties.keys()
         fields = {}
-        args = self.request.arguments()
+        #args = self.request.arguments()
+        args = self.args.keys()
         for arg in args:
             if arg == 'token': continue
             if not arg in valid:
                 logging.info('MISSING ' + arg)
                 self.error(401)
                 return
-            value = self.request.get(arg)
-            if arg == 'password':
+            value = self.args[arg]
+            if isinstance(properties[arg], db.ReferenceProperty):
+                foreignModel = properties[arg].reference_class
+                foreignKey = value
+                try:
+                    foreignInstance = foreignModel.get(foreignKey)
+                except:
+                    self.error(401)
+                    return
+                value = foreignInstance
+            elif arg == 'password':
                 value = hashlib.md5(value).hexdigest()
             elif arg == 'admin':
                 value = True if value == 'true' else False
@@ -316,6 +345,27 @@ class _APIModelHandler(_APIHandler):
             [self.resolve_properties(instance) for instance in query],
         self.response, skipkeys=True, cls=APIJSONEncoder)
 
+    def api_remove(self):
+        args = self.args
+        if 'id' in args:
+            instancekey = self.request.get('id')
+            try:
+                instance = self._model.get(instancekey)
+            except db.BadKeyError:
+                self.error(404)
+                return
+            except db.KindError:
+                self.error(401)
+                return
+            instance.delete()
+        elif 'ids' in args:
+            try:
+                keylist = json.loads(self.request.get('ids'))
+            except ValueError:
+                self.error(401)
+                return
+            db.delete(keylist)
+
     def api_consoleupdate(self):
         args = self.args
         instancekey = args['pk']
@@ -341,6 +391,7 @@ class _APIModelHandler(_APIHandler):
 
 class APISessionHandler(_APIHandler):
     _secure = False
+
     def api_begin(self):
         username = self.request.get('username', '')
         password = self.request.get('password', '')
@@ -397,7 +448,7 @@ class APIClientHandler(_APIModelHandler):
     _model = models.Client
 
 class APITicketHandler(_APIModelHandler):
-    _model = models.Ticket        
+    _model = models.Ticket
 
 #Delegating the various handlers to their respective paths
 app = webapp2.WSGIApplication([

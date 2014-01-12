@@ -31,7 +31,7 @@
         <table class="table">
             {% for y in range(amount) %}
                 <tr>
-                    {{ qr_row(uuid.uuid4().hex, y) }}
+                    {{ qr_row('clarity' + uuid.uuid4().hex, y) }}
                 </tr>
             {% endfor %}
         </table>

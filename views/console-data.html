@@ -22,7 +22,7 @@
     </div>
     <br>
     <div class="container" style="text-align: center;">
-        <button class="btn btn-danger" id="data_buttonDelete" disabled>Delete Selected (WIP)</button><button class="btn btn-primary" id="data_buttonModal" disabled>Create New</button>
+        <button class="btn btn-danger" id="data_buttonDelete" disabled>Delete Selected</button><button class="btn btn-primary" id="data_buttonModal" disabled>Create New</button>
     </div>
     <br><br>
     <div class="table-responsive" style="width: 90%; margin: auto;">
@@ -44,15 +44,13 @@
                 <h4 class="modal-title">Insert a New Record</h4>
             </div>
             <div class="modal-body">
-                <p>
-                    <h4>Required fields are marked with an exclamation</h4>
-                </p>
+                <blockquote><em>Be aware that newly inserted records may take some time to propagate through the database (typically less than 1 minute).</em></blockquote>
                 <table class="table" id="data_modalRecordTable">
                 </table>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary">Submit (WIP)</button>
+                <button type="button" class="btn btn-primary" id="data_buttonModalRecordSubmit">Submit</button>
             </div>
         </div>
     </div>
@@ -75,7 +73,11 @@
             model, modelName));
         }
 
-        $('.data_buttonModel').click(data_buttonModelPress);
+        $('.data_buttonModel').click(function() {
+            var model = $(this).attr('model');
+            currentModel = model;
+            data_buttonModelPress();
+        });
     }
 
     function data_parseData(data, status, xhr) {
@@ -100,11 +102,20 @@
                 if (key == 'id') {
                     var entry = $(String.format('<input type="text" class="data_tableID" value="{0}" readonly></input>', value)).appendTo(cell);
                     entry.css('width', '100%');
-                    entry.popover({
+                    entry.tooltip({
                         'placement': 'top',
-                        'trigger': 'hover',
-                        'content': 'Ctrl+C to copy'
+                        'title': 'Ctrl+C to copy'
                     });
+                }
+                else if (type == "model"){
+                    var entry = $(String.format('<a class="btn btn-sm btn-info" href="/api/{0}_view?token={1}&id={2}" target="_blank">{3} {4}</a>',
+                        currentModel,
+                        session,
+                        value['id'],
+                        value['name_first'],
+                        value['name_last']
+                    )).appendTo(cell);
+                    entry.css('width', '100%');
                 }
                 else {
                     editor = $('<a href="#" class="data_tableElement"></a>').appendTo(cell);
@@ -129,6 +140,13 @@
                                     $(this).text('. . .');
                                 }
                             };
+                            break;
+                        case 'datetime':
+                            //if (value == null){
+                                //options['value'] = '';
+                            //}
+                            options['format'] = 'yyyy-mm-dd hh:ii:ss'
+                            break;
                     }
 
                     switch (typeof(value)) {
@@ -169,8 +187,7 @@
         $('#data_tableHead').empty();
         $('#data_tableBody').empty();
 
-        var model = $(this).attr('model');
-        currentModel = model;
+        var model = currentModel;
         var properties = modelProperties[model];
         var head = '<td>&nbsp;<span class="glyphicon glyphicon-ok"></span>&nbsp;</td>';
 
@@ -222,11 +239,13 @@
         });
 
         for (i in properties) {
+            if(properties[i][3] == null){continue;}
             var key = properties[i][0];
             var type = properties[i][1];
             var row = $('<tr></tr>').appendTo(table);
 
             if(type=='null'){continue;}
+            if(type=='model'){type='text';}
             row.append(String.format('<td><strong>{0}</strong></td>', key));
 
             var cell = $('<td></td>').appendTo(row);
@@ -254,8 +273,29 @@
                 cell.append('&nbsp;&nbsp;<span class="glyphicon glyphicon-exclamation-sign"></span>');
             }
         }
-
+        $('#data_modalRecord .glyphicon').tooltip({
+            'placement': 'right',
+            'title': 'Required field'
+        })
         $('#data_modalRecord').modal('show');
+    });
+    
+    $('#data_buttonModalRecordSubmit').click(function() {
+        $(this).prop('disabled', true);
+        var data = $('#data_modalRecord .editable').editable('getValue');
+        $.ajax({
+            'url': String.format('/api/{0}_create?token={1}', currentModel, session),
+            'dataType': 'json',
+            'data': data,
+            'success': function() {
+                $('#data_buttonModalRecordSubmit').prop('disabled', false);
+                $('#data_modalRecord').modal('hide');
+            },
+            'error': function() {
+                bootbox.alert('An error occurred trying to insert the new record. Perhaps you forgot a required field?');
+                $('#data_buttonModalRecordSubmit').prop('disabled', false);
+            }
+        })
     });
 
     $(document).ready(function() {

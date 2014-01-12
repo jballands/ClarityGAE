@@ -158,9 +158,29 @@ class APIJSONEncoder(json.JSONEncoder):
         elif isinstance(obj, db.Key):
             return str(obj)
         elif isinstance(obj, db.Model):
-            return _APIHandler.resolve_properties(obj)
+            properties = obj.properties()
+
+            kvs = db.to_dict(obj)
+            
+            kvs.pop('password', None)
+
+            if 'binary' in kvs and kvs['binary'] is not None:
+                kvs['binary'] = base64.b64encode(kvs['binary'])
+
+            for key in kvs:
+
+                if isinstance(properties[key], db.ReferenceProperty):
+                    if kvs[key] is None: continue
+                    reference = properties[key].reference_class.get(kvs[key])
+                    kvs[key] = reference
+
+            kvs['id'] = obj.key()
+            return kvs
         else:
-            return json.JSONEncoder.default(self, obj)
+            try:
+                return json.JSONEncoder.default(self, obj)
+            except TypeError:
+                return 'CANNOT_SERIALIZE'
 
 class APIJSONDecoder(json.JSONDecoder):
     def decode(self, obj):
@@ -206,6 +226,8 @@ class _APIHandler(webapp2.RequestHandler):
             return hashlib.md5(value).hexdigest()
         if key == 'qrcode':
             return value if re.match(r'clarity[a-f0-9]{32}$', value) is not None else None
+        if key == 'binary':
+            return base64.b64decode(value)
 
         if value == 'true':
             return True
@@ -293,7 +315,7 @@ class _APIModelHandler(_APIHandler):
         args = self.request.arguments()
         data = None
         if 'id' in args:
-            instancekey = self.request.get('id')
+            instancekey = self.args.get('id', '')
             try:
                 instance = self._model.get(instancekey)
             except db.BadKeyError:
@@ -302,7 +324,8 @@ class _APIModelHandler(_APIHandler):
             except db.KindError:
                 self.error(401)
                 return
-            data = self.resolve_properties(instance)
+            #data = self.resolve_properties(instance)
+            data = instance
         elif 'ids' in args:
             data = []
             try:
@@ -321,7 +344,8 @@ class _APIModelHandler(_APIHandler):
             runlimit = 100
             if nolimit:
                 runlimit = None
-            data = [self.resolve_properties(model) for model in self._model.all().run(limit=runlimit)]
+            #data = [self.resolve_properties(model) for model in self._model.all().run(limit=runlimit)]
+            data = list(self._model.all().run(limit=runlimit))
             #json.dump(models, self.response, skipkeys=True, cls=APIJSONEncoder)
         json.dump(data, self.response, skipkeys=True, cls=APIJSONEncoder)
 
@@ -441,8 +465,24 @@ class APISessionHandler(_APIHandler):
         session.put()
 
 class APIProviderHandler(_APIModelHandler):
-    _elevated = True
+    _restricted = True
     _model = models.Provider
+
+class APIHeadshotHandler(_APIModelHandler):
+    _model = models.Headshot
+    def api_download(self):
+        instancekey = self.args.get('id', '')
+        try:
+            instance = self._model.get(instancekey)
+        except db.BadKeyError:
+            self.error(404)
+            return
+        except db.KindError:
+            self.error(401)
+            return
+
+        self.response.headers['Content-Type'] = instance.mimetype
+        self.response.write(instance.binary)
 
 class APIClientHandler(_APIModelHandler):
     _model = models.Client
@@ -459,6 +499,7 @@ app = webapp2.WSGIApplication([
     ('/cron/(\w+)', CronHandler),
     ('/api/session_(\w+)', APISessionHandler),
     ('/api/provider_(\w+)', APIProviderHandler),
+    ('/api/headshot_(\w+)', APIHeadshotHandler),
     ('/api/client_(\w+)', APIClientHandler),
     ('/api/ticket_(\w+)', APITicketHandler),
 ], debug=True)

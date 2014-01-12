@@ -5,8 +5,9 @@ from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 
-class Blobby(db.Model):
-    data = db.BlobProperty(required=False)
+class Headshot(db.Model):
+    binary = db.BlobProperty(required=True)
+    mimetype = db.StringProperty(required=False, default='image/jpeg')
 
 class Provider(db.Model):
     #General properties:
@@ -21,8 +22,8 @@ class Provider(db.Model):
 
     admin = db.BooleanProperty(required=True)
 
-    headshot = blobstore.BlobReferenceProperty()
-    #This will be one tricky bitch to program
+    headshot = db.ReferenceProperty(Headshot, required=False)
+    #headshot = blobstore.BlobReferenceProperty()
 
     #Housekeeping:
     datetime_created = db.DateTimeProperty(auto_now_add=True)

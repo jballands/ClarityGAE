@@ -14,6 +14,7 @@
             </label>
             -->
         </div>
+        <!--<button class="btn btn-info" id="data_buttonRefresh" disabled><span class="glyphicon glyphicon-refresh"></span> </button>-->
     </div>
     <br>
     <div class="progress progress-striped active" style="display: block; margin-left: auto; margin-right: auto; width: 80%;">
@@ -45,7 +46,7 @@
             </div>
             <div class="modal-body">
                 <blockquote><em>Be aware that newly inserted records may take some time to propagate through the database (typically less than 1 minute).</em></blockquote>
-                <table class="table" id="data_modalRecordTable">
+                <table class="table table-bordered table-striped" id="data_modalRecordTable">
                 </table>
             </div>
             <div class="modal-footer">
@@ -56,6 +57,22 @@
     </div>
 </div>
 
+<div class="modal fade" id="data_modalView" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">View a Linked Record</h4>
+            </div>
+            <div class="modal-body">
+                <table class="table table-bordered table-striped" id="data_modalViewTable">
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script type="text/javascript">
     var currentModel = '';
@@ -103,19 +120,24 @@
                     var entry = $(String.format('<input type="text" class="data_tableID" value="{0}" readonly></input>', value)).appendTo(cell);
                     entry.css('width', '100%');
                     entry.tooltip({
-                        'placement': 'top',
+                        'placement': 'right',
                         'title': 'Ctrl+C to copy'
                     });
                 }
                 else if (type == "model"){
-                    var entry = $(String.format('<a class="btn btn-sm btn-info" href="/api/{0}_view?token={1}&id={2}" target="_blank">{3} {4}</a>',
-                        currentModel,
-                        session,
+                    var entry = $(String.format('<button class="btn btn-sm btn-info" model="{0}" modelid="{1}">{2} {3}</button>',
+                        properties[j][2],
                         value['id'],
                         value['name_first'],
                         value['name_last']
                     )).appendTo(cell);
                     entry.css('width', '100%');
+                    entry.click(function() {
+                        data_viewModel(
+                            $(this).attr('model'),
+                            $(this).attr('modelid')
+                        )
+                    });
                 }
                 else {
                     editor = $('<a href="#" class="data_tableElement"></a>').appendTo(cell);
@@ -177,12 +199,14 @@
     }
 
     function data_enableControls() {
-        $('.data_buttonModel').attr('disabled', false);
+        $('#data_buttonRefresh').prop('disabled', false).click(data_buttonModelPress);
+        $('.data_buttonModel').prop('disabled', false);
         $('#data_progressBar').css('width', '0%');
     }
 
     function data_buttonModelPress() {
-        $('.data_buttonModel').attr('disabled', true);
+        $('#data_buttonRefresh').prop('disabled', true);
+        $('.data_buttonModel').prop('disabled', true);
         $('#data_progressBar').css('width', '100%');
         $('#data_tableHead').empty();
         $('#data_tableBody').empty();
@@ -246,7 +270,7 @@
 
             if(type=='null'){continue;}
             if(type=='model'){type='text';}
-            row.append(String.format('<td><strong>{0}</strong></td>', key));
+            row.append(String.format('<td><strong>{0}</strong></td>', key.toUpperCase()));
 
             var cell = $('<td></td>').appendTo(row);
             var editor = $('<a href="#"></a>').appendTo(cell);
@@ -297,6 +321,33 @@
             }
         })
     });
+
+    function data_viewModel(model, modelid) {
+        $('#data_modalView').modal('hide');
+        $('#data_modalViewTable').children().each(function() {
+            $(this).remove();
+        });
+        $('#data_modalView').modal('show');
+        $.ajax({
+            'url': String.format('/api/{0}_get?token={1}&id={2}', model, session, modelid),
+            'dataType': 'json',
+            'error': function() {
+                $('#data_modalView').modal('hide');
+                bootbox.alert('An error occurred trying to load the record.');
+            },
+            'success': function(data, status, xhr) {
+                var table = $('#data_modalViewTable');
+
+                for (i in modelProperties[model]) {
+                    var property = modelProperties[model][i];
+                    table.append(String.format('<tr><td><strong>{0}</strong></td><td>{1}</td></tr>',
+                        property[0].toUpperCase(),
+                        data[property[0]]
+                    ));
+                }
+            }
+        });
+    }
 
     $(document).ready(function() {
         data_makeButtons();

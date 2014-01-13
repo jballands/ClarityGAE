@@ -1,9 +1,9 @@
 <div class="tab-pane fade" id="tab-data">
     <br>
 
-    <div class="row">
+    <div class="row well well-sm">
         <div class="col-md-10 col-md-offset-1" style="text-align: center;" id="data_buttonRow">
-            Click to change or reload data:&nbsp;
+            Click to change data type or reload:&nbsp;
             <button class="btn btn-primary" disabled>_______</button>
         </div>
     </div>
@@ -552,7 +552,6 @@
     }
 
     $(document).ready(function() {
-
         $.ajax({
             'url': '/static/data/data-config.json',
             'dataType': 'json',
@@ -563,12 +562,7 @@
             'error': function(xhr, status, error) {
                 bootbox.alert(String.format('The data view configuration file failed to load. Try reloading the page.<br><br><div class="alert alert-warning">{0}</div>', error));
             }
-        })
-        /*try {
-            data_config = jsyaml.safeLoad(fs.readFileSync('/static/js/data-config.yaml', 'utf8'));
-            data_makeButtons();
-        } catch (e) {
-            bootbox.alert(String.format('The data view configuration file failed to load. Try reloading the page.<br><br><div class="alert alert-warning">{0}</div>', e))
-        }*/
+        });
     });
+    
 </script>

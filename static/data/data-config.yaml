@@ -1,0 +1,149 @@
+models:
+    -   client
+    -   provider
+    -   ticket
+
+names:
+    client: Clients
+    provider: Providers
+    ticket: Tickets
+
+namePrefixes: &prefixes
+    - {value: '', text: ''}
+    - {value: Ms., text: Miss}
+    - {value: Mrs., text: Missis}
+    - {value: Mr., text: Mister}
+    - {value: Rev., text: Reverend}
+    - {value: Dr., text: Doctor}
+
+nameSuffixes: &suffixes
+    - {value: '', text: ''}
+    - {value: I, text: the First}
+    - {value: II, text: the Second}
+    - {value: III, text: the Third}
+    - {value: IV, text: the Fourth}
+    - {value: V, text: the Fifth}
+    - {value: Jr., text: Junior}
+    - {value: Sr., text: Senior}
+    - {value: Esq., text: Esquire}
+
+truefalse: &truefalse
+    - {value: !!str true, text: !!str Yes}
+    - {value: !!str false, text: !!str No}
+
+sexes: &sexes
+    - {value: male, text: Male}
+    - {value: female, text: Female}
+    - {value: intersex, text: Intersex}
+
+properties:
+
+    client:
+    -   name: id
+        type: readonly
+        required: null
+
+    -   name: headshot
+        type: headshot
+        required: null
+
+    -   name: name_prefix
+        type: select
+        required: false
+        options: *prefixes
+
+    -   name: name_first
+        type: text
+        required: true
+
+    -   name: name_middle
+        type: text
+        required: false
+
+    -   name: name_last
+        type: text
+        required: true
+
+    -   name: name_suffix
+        type: select
+        required: false
+        options: *suffixes
+
+    -   name: dateofbirth
+        type: date
+        required: true
+
+    -   name: sex
+        type: select
+        required: true
+        options: *sexes
+
+    -   name: location
+        type: textarea
+        required: false
+
+    provider:
+    -   name: id
+        type: readonly
+        required: null
+
+    -   name: headshot
+        type: headshot
+        required: null
+
+    -   name: name_prefix
+        type: select
+        required: false
+        options: *prefixes
+
+    -   name: name_first
+        type: text
+        required: true
+
+    -   name: name_middle
+        type: text
+        required: false
+
+    -   name: name_last
+        type: text
+        required: true
+
+    -   name: name_suffix
+        type: select
+        required: false
+        options: *suffixes
+
+    -   name: username
+        type: text
+        required: true
+
+    -   name: password
+        type: password
+        required: true
+
+    -   name: admin
+        type: select
+        required: true
+        options: *truefalse
+
+    ticket:
+    -   name: id
+        type: readonly
+        required: null
+
+    -   name: qrcode
+        type: text
+        required: false
+
+    -   name: client
+        type: model
+        model: client
+
+    -   name: isopen
+        type: select
+        required: null
+        options: *truefalse
+
+    -   name: opened
+        type: datetime
+        required: null

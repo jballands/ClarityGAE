@@ -138,6 +138,7 @@ properties:
     -   name: client
         type: model
         model: client
+        required: true
 
     -   name: isopen
         type: select

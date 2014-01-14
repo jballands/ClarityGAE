@@ -8,17 +8,31 @@
         </div>
     </div>
 
+    <div class="row well">
+        <div class="col-md-3 col-md-offset-1">
+            <select class="form-control" id="data_filterSelect" disabled>
+                <option value="" disabled selected>Field</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <input type="text" class="form-control" id="data_filterInput" placeholder="Value" disabled/>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-default btn-block" id="data_buttonFilter" disabled>Filter Data</button>
+        </div>
+    </div>
+
     <hr>
 
     <div class="row">
         <div class="col-md-10 col-md-offset-1" style="text-align: center;">
-            <button class="btn btn-block btn-primary" id="data_buttonModal" disabled>Create New</button>
+            <button class="btn btn-block btn-primary" id="data_buttonCreateRecord" disabled>Create New</button>
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-10 col-md-offset-1" style="text-align: center;">
-            <button class="btn btn-block btn-danger" id="data_buttonDelete" disabled>Delete Selected</button>
+            <button class="btn btn-block btn-danger" id="data_buttonDeleteRecord" disabled>Delete Selected</button>
         </div>
     </div>
 
@@ -30,7 +44,7 @@
     <div class="row">
         <div class="col-md-10 col-md-offset-1">
             <div class="table-responsive">
-                <table class="table table-striped table-hover table-condensed table-bordered" id="data_table">
+                <table class="table table-striped table-condensed table-bordered" id="data_table">
                     <thead id="data_tableHead">
                     </thead>
                     <tbody id="data_tableBody">
@@ -42,20 +56,22 @@
 </div>
 
 
-<div class="modal fade" id="data_modalRecord" tabindex="-1">
+<div class="modal fade" id="data_modalCreateRecord" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title">Insert a New Record</h4>
             </div>
             <div class="modal-body">
-                <blockquote><em>Be aware that newly inserted records may take some time to propagate through the database (typically less than 1 minute).</em></blockquote>
-                <table class="table table-bordered table-striped" id="data_modalRecordTable">
+                <blockquote><em>Be aware that newly inserted records may take some time to propagate through the database (typically less than 1 minute).<br>
+                <br>
+                Required items are marked with an exclamation.</em></blockquote>
+                <table class="table table-striped table-bordered" id="data_modalCreateRecordTable">
                 </table>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="data_buttonModalRecordSubmit">Submit</button>
+                <button type="button" class="btn btn-primary" id="data_buttonCreateRecordSubmit">Submit</button>
             </div>
         </div>
     </div>
@@ -81,7 +97,8 @@
 
 <style type="text/css">
     th, td {
-        text-align: center;
+        text-align: center; 
+        vertical-align: middle;
     }
 </style>
 
@@ -110,7 +127,7 @@
         });
     }
 
-    function data_dataLoad(model) {
+    function data_dataLoad(model, query, offset) {
         $('.buttonModelLoad').prop('disabled', true);
         $('#data_tableHead').children().remove();
         $('#data_tableBody').children().remove();
@@ -179,10 +196,17 @@
                 data_makeEditable(cell, record, property);
             }
         }
+
+        //Enable the Create and Delete buttons as well as all the filter controls
+        $('#data_buttonCreateRecord, #data_buttonDeleteRecord').prop('disabled', false);
+        $('#data_filterSelect, #data_filterInput, #data_buttonFilter').prop('disabled', false);
     }
 
-    function data_makeEditable(cell, record, property) {
-        var value = record[property.name];
+    function data_makeEditable(cell, record, property, empty) {
+        var value = null;
+        if (!empty) {
+            value = record[property.name];
+        }
 
         //Convert booleans to strings, because ceditable is kind of a witch.
         if (typeof(value) == 'boolean') {
@@ -218,6 +242,12 @@
                 return;
 
             case 'model':
+                //If this is a form, continue as a text entry
+                if (empty) {
+                    property['type'] = 'text';
+                    break;
+                }
+
                 //Generate the button text based on what foreign model is being loaded.
                 var text = 'View'
                 if (property.model == 'client') {text = value.name_first + ' ' + value.name_last;}
@@ -230,7 +260,7 @@
                     )).appendTo(cell);
                     entry.css('width', '100%');
                     entry.click(function() {
-                        data_viewModel(
+                        data_viewRecord(
                             $(this).attr('model'),
                             $(this).attr('modelid')
                         )
@@ -243,12 +273,17 @@
         var editor = $('<a href="#"></a>').appendTo(cell);
         var url = String.format('/api/{0}_consoleupdate?token={1}', data_current, session)
         var options = {
-            'url': url,
             'type': property.type,
-            'pk': record.id,
             'name': property.name,
-            'value': value,
         };
+
+        //Complete the options if this isn't destined for a form
+        if (!empty) {
+            options['url'] = url;
+            options['pk'] = record.id;
+            options['value'] = value;
+        }
+
 
         //This switch tweaks the xeditable options for some of the types.
         switch (property.type) {
@@ -275,256 +310,19 @@
 
         }
 
+        //If this form is destined for a form, reap its ability to send requests.
+        if (empty) {
+            delete options['url'];
+            delete options['pk'];
+            delete options['value'];
+        }
+
         //Initialize the xeditable.
         editor.editable(options);
     }
 
-    function data_makeButtons() {
-        var buttonGroup = $('#data_buttonGroup');
-        for (i in models) {
-            var model = models[i];
-            var modelName = modelNames[model];
-            //alert(modelName);
-            buttonGroup.append(String.format(
-                '<label class="btn btn-primary btn-lg data_buttonModel" model="{0}">\
-                    <input type="radio"> {1}\
-                </label>',
-            model, modelName));
-        }
-
-        $('.data_buttonModel').click(function() {
-            var model = $(this).attr('model');
-            currentModel = model;
-            data_buttonModelPress();
-        });
-    }
-
-    function data_parseData(data, status, xhr) {
-        $('#data_buttonModal').attr('disabled', false);
-        var tableBody = $('#data_tableBody');
-        var properties = modelProperties[currentModel];
-        for (i in data) {
-            var instance = data[i];
-            tableBody.append(String.format('<tr id="{0}"></tr>', instance['id']));
-            var row = $('#' + instance['id']);
-
-            var cell = $('<td></td>').appendTo(row);
-            var checkbox = $('<input type="checkbox" class="data_check">').appendTo(cell);
-            checkbox.attr('value', instance['id'])
-
-            for (j in properties) {
-                var key = properties[j][0];
-                var value = instance[key];
-                var type = properties[j][1];
-                var cell = $('<td></td>').appendTo(row);
-
-                if (key == 'id') {
-                    var entry = $(String.format('<input type="text" class="data_tableID" value="{0}" readonly></input>', value)).appendTo(cell);
-                    entry.css('width', '100%');
-                    entry.tooltip({
-                        'placement': 'right',
-                        'title': 'Ctrl+C to copy'
-                    });
-                }
-                else if (type == "model"){
-                    var entry = $(String.format('<button class="btn btn-sm btn-info" model="{0}" modelid="{1}">{2} {3}</button>',
-                        properties[j][2],
-                        value['id'],
-                        value['name_first'],
-                        value['name_last']
-                    )).appendTo(cell);
-                    entry.css('width', '100%');
-                    entry.click(function() {
-                        data_viewModel(
-                            $(this).attr('model'),
-                            $(this).attr('modelid')
-                        )
-                    });
-                }
-                else {
-                    editor = $('<a href="#" class="data_tableElement"></a>').appendTo(cell);
-                    var options = {
-                        'url': String.format('/api/{0}_consoleupdate?token={1}', currentModel, session),
-                        'type': type,
-                        'pk': instance['id'],
-                        'name': key,
-                        'value': value,
-                    };
-
-                    switch (type) {
-                        case 'select':
-                            options['source'] = properties[j][2];
-                            break;
-                        case 'password':
-                            options['emptytext'] = 'Click to Change';
-                            break;
-                        case 'textarea':
-                            options['display'] = function(value, sourceData) {
-                                if (value.length > 0) {
-                                    $(this).text('. . .');
-                                }
-                            };
-                            break;
-                        case 'datetime':
-                            //if (value == null){
-                                //options['value'] = '';
-                            //}
-                            options['format'] = 'yyyy-mm-dd hh:ii:ss'
-                            break;
-                    }
-
-                    switch (typeof(value)) {
-                        case 'boolean':
-                            options['value'] = JSON.stringify(value);
-                            break;
-                    }
-
-                    editor.editable(options);
-                }
-            }
-        }
-
-        $('.data_check').click(function () {
-            var button = $('#data_buttonDelete');
-            var n = $('.data_check:checked').length;
-            if (n > 0) {
-                button.attr('disabled', false);
-            }
-            else {
-                button.attr('disabled', true);
-            }
-        });
-
-        $('.data_tableID').hover(function() {
-            $(this).select();
-        });
-    }
-
-    function data_enableControls() {
-        $('#data_buttonRefresh').prop('disabled', false).click(data_buttonModelPress);
-        $('.data_buttonModel').prop('disabled', false);
-        $('#data_progressBar').css('width', '0%');
-    }
-
-    function data_buttonModelPress() {
-        $('#data_buttonRefresh').prop('disabled', true);
-        $('.data_buttonModel').prop('disabled', true);
-        $('#data_progressBar').css('width', '100%');
-        $('#data_tableHead').empty();
-        $('#data_tableBody').empty();
-
-        var model = currentModel;
-        var properties = modelProperties[model];
-        var head = '<td>&nbsp;<span class="glyphicon glyphicon-ok"></span>&nbsp;</td>';
-
-        for (i in properties) {
-            var property = properties[i][0];
-            head += String.format('<td><strong>{0}</strong></td>', property.toUpperCase());
-        }
-
-        $('#data_tableHead').append(head);
-
-        $.ajax({
-            'url': String.format('/api/{0}_get?token={1}', model, session),
-            'dataType': 'json',
-            'success': data_parseData,
-            'complete': data_enableControls
-        })
-    }
-
-    $('#data_buttonDelete').click(function() {
-        var ids = []
-        checkboxes = $('.data_check:checked').each(function() {
-            ids.push($(this).val());
-        });
-        $('#data_buttonDelete').attr('disabled', true);
-        $.ajax({
-            'url': String.format('/api/{0}_remove?token={1}&ids={2}', currentModel, session, JSON.stringify(ids)),
-            'success': function() {
-                $('.data_check:checked').each(function() {
-                    $(this).parent().parent().remove();
-                });
-            },
-            'error': function() {
-                bootbox.alert('Error encountered while delete records');
-                $('#data_buttonDelete').attr('disabled', false);
-            },
-        });
-    });
-
-    var data_modalRecordFields = [];
-
-    $('#data_buttonModal').click(function() {
-        var model = currentModel;
-        var properties = modelProperties[model];
-        var table = $('#data_modalRecordTable')
-
-        data_modalRecordFields = [];
-        table.children().each(function() {
-            $(this).remove();
-        });
-
-        for (i in properties) {
-            if(properties[i][3] == null){continue;}
-            var key = properties[i][0];
-            var type = properties[i][1];
-            var row = $('<tr></tr>').appendTo(table);
-
-            if(type=='null'){continue;}
-            if(type=='model'){type='text';}
-            row.append(String.format('<td><strong>{0}</strong></td>', key.toUpperCase()));
-
-            var cell = $('<td></td>').appendTo(row);
-            var editor = $('<a href="#"></a>').appendTo(cell);
-            var options = {
-                'type': type,
-                'name': key,
-            };
-
-            switch (type) {
-                case 'select':
-                    options['source'] = properties[i][2];
-                    break;
-            }
-
-            switch (key) {
-                case 'admin':
-                    options['admin'] = false;
-                    break;
-            }
-
-            data_modalRecordFields.push(editor.editable(options));
-
-            if (properties[i][3]) {
-                cell.append('&nbsp;&nbsp;<span class="glyphicon glyphicon-exclamation-sign"></span>');
-            }
-        }
-        $('#data_modalRecord .glyphicon').tooltip({
-            'placement': 'right',
-            'title': 'Required field'
-        })
-        $('#data_modalRecord').modal('show');
-    });
-    
-    $('#data_buttonModalRecordSubmit').click(function() {
-        $(this).prop('disabled', true);
-        var data = $('#data_modalRecord .editable').editable('getValue');
-        $.ajax({
-            'url': String.format('/api/{0}_create?token={1}', currentModel, session),
-            'dataType': 'json',
-            'data': data,
-            'success': function() {
-                $('#data_buttonModalRecordSubmit').prop('disabled', false);
-                $('#data_modalRecord').modal('hide');
-            },
-            'error': function() {
-                bootbox.alert('An error occurred trying to insert the new record. Perhaps you forgot a required field?');
-                $('#data_buttonModalRecordSubmit').prop('disabled', false);
-            }
-        })
-    });
-
-    function data_viewModel(model, modelid) {
+    function data_viewRecord(model, modelid) {
+        //Hide the modal and clear its contents
         $('#data_modalView').modal('hide');
         $('#data_modalViewTable').children().each(function() {
             $(this).remove();
@@ -540,18 +338,149 @@
             'success': function(data, status, xhr) {
                 var table = $('#data_modalViewTable');
 
-                for (i in modelProperties[model]) {
-                    var property = modelProperties[model][i];
+                for (i in data_config['properties'][model]) {
+                    var property = data_config['properties'][model][i];
                     table.append(String.format('<tr><td><strong>{0}</strong></td><td>{1}</td></tr>',
-                        property[0].toUpperCase(),
-                        data[property[0]]
+                        property['name'].toUpperCase(),
+                        data[property['name']]
                     ));
                 }
             }
         });
     }
 
+    function data_createRecord(model) {
+        //Gather necessary data.
+        var properties = data_config['properties'][model];
+        var table = $('#data_modalCreateRecordTable');
+
+        //Clear previous information from the modal.
+        data_modalCreateRecordFields = [];
+        table.children().each(function() {
+            $(this).remove();
+        });
+
+        //Iterate through properties and add to table (with garnishes).
+        for (i in properties) {
+            var property = properties[i];
+
+            //If property is not meant to be filled out (such as record ID), then continue without it.
+            if (property['required'] == null) {continue;}
+
+            //Create an empty row for placing elements in
+            var row = $('<tr></tr>').appendTo(table);
+
+            //Add the property name; in bolded caps.
+            row.append(String.format('<td><strong>{0}</strong></td>', property['name'].toUpperCase()));
+
+            //Make the cell, pass it to the constructor, and profit.
+            var cell = $('<td></td>').appendTo(row);
+            data_makeEditable(cell, null, property, true);
+
+            //Create a cell for the indicator.
+            var cell = $('<td></td>').appendTo(row);
+
+            //If it's a required property, append a glyphicon.
+            if (property['required'] == true) {
+                cell.append('<span class="glyphicon glyphicon-exclamation-sign"></span>');
+            }
+        }
+
+        //Show off the finished product!
+        $('#data_modalCreateRecord').modal('show');
+        
+        //Give the submit button something to do.
+        $('#data_buttonCreateRecordSubmit').click(function() {
+            //Disabled the button to prevent duplicate requests.
+            $('#data_buttonCreateRecordSubmit').prop('disabled', true);
+
+            //Collect values from form editables and inject session token.
+            var data = $('#data_modalCreateRecordTable .editable').editable('getValue');
+            alert(JSON.stringify(data));
+            data['token'] = session;
+
+            //Send it off!
+            var url = String.format('/api/{0}_create', model);
+            $.ajax({
+                'url': url,
+                'type': 'POST',
+                'dataType': 'json',
+                'data': data,
+
+                //If successful, close the modal and re-enabled the button.
+                'success': function() {
+                    $('#data_modalCreateRecord').modal('hide');
+                },
+
+                //If not successful, do the error thang.
+                'error': data_errorHandler,
+
+                //On completion, enable the button.
+                'complete': function() {
+                    $('#data_buttonCreateRecordSubmit').prop('disabled', false);
+                }
+            });
+        });
+    }
+
+    function data_deleteRecords(model, modelids) {
+        //'modelids' should be an array of ids to remove.
+
+        //Disable the delete button to prevent duplicate requests being made.
+        $('#data_buttonDeleteRecord').prop('disabled', true);
+
+        var url = String.format('/api/{0}_remove', model)
+        $.ajax({
+            'url': url,
+            'type': 'POST',
+            'data': {
+                'token': session,
+                'ids': JSON.stringify(modelids),
+            },
+
+            //If deletion succeeds, remove the rows from the table.
+            'success': function() {
+                for (i in modelids) {
+                    var id = modelids[i];
+                    $('tr#' + id).remove();
+                }
+            },
+
+            //If deletion fails, use the warning template. :P
+            'error': data_errorHandler,
+
+            //On completion, re-enable the delete button.
+            'complete': function() {
+                $('#data_buttonDeleteRecord').prop('disabled', false);
+            }
+        });
+    }
+
+    //Bind the delete button to the deleteRecords function (sorta).
+    $('#data_buttonDeleteRecord').click(function() {
+        var modelids = [];
+
+        //Iterate through checked boxes and push their row ids to the array.
+        $('.data_tableCheck:checked').each(function() {
+            modelids.push($(this).val());
+        });
+
+        //If nothing is selected, return.
+        if (modelids.length == 0) {return;}
+
+        //Do the deed.
+        data_deleteRecords(data_current, modelids);
+    });
+
+    
+    //Bind the create button to the createRecord function (sorta).
+    $('#data_buttonCreateRecord').click(function() {
+        var model = data_current;
+        data_createRecord(model);
+    });    
+
     $(document).ready(function() {
+        //Load up the configuartion
         $.ajax({
             'url': '/static/data/data-config.json',
             'dataType': 'json',

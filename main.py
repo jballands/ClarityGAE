@@ -372,7 +372,8 @@ class _APIModelHandler(_APIHandler):
     def api_remove(self):
         args = self.args
         if 'id' in args:
-            instancekey = self.request.get('id')
+            #instancekey = self.request.get('id')
+            instancekey = args['id']
             try:
                 instance = self._model.get(instancekey)
             except db.BadKeyError:
@@ -382,13 +383,19 @@ class _APIModelHandler(_APIHandler):
                 self.error(401)
                 return
             instance.delete()
-        elif 'ids' in args:
+            return
+        if 'ids' in args:
             try:
-                keylist = json.loads(self.request.get('ids'))
+                #keylist = json.loads(self.request.get('ids'))
+                keylist = json.loads(args['ids'])
+                logging.info('KEYLIST '+ repr(keylist))
             except ValueError:
                 self.error(401)
                 return
             db.delete(keylist)
+            return
+
+        self.error(401)
 
     def api_consoleupdate(self):
         args = self.args

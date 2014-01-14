@@ -47,8 +47,7 @@ class Client(db.Model):
     name_middle = db.StringProperty(required=False)
     name_last = db.StringProperty(required=True)
     name_suffix = db.StringProperty(required=False)
-    #dateofbirth = db.DateProperty(required=True)
-    dateofbirth = db.StringProperty(required=True)
+    dateofbirth = db.DateProperty(required=True)
     sex = db.StringProperty(required=True)
     location = db.StringProperty(required=False)
 

@@ -396,7 +396,6 @@
 
             //Collect values from form editables and inject session token.
             var data = $('#data_modalCreateRecordTable .editable').editable('getValue');
-            alert(JSON.stringify(data));
             data['token'] = session;
 
             //Send it off!

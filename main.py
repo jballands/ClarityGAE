@@ -142,19 +142,22 @@ datetime_format = '%Y-%m-%d %H:%M:%S'
 date_format = '%Y-%m-%d'
 
 def stripDateAndOrTime(string):
-    for format in [datetime_format, date_format]:
+    for format in [date_format, datetime_format]:
         try:
             result = datetime.datetime.strptime(string, format)
+            if format == date_format:
+                result = result.date()
             return result
         except: pass
+
     return None
 
 class APIJSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, datetime.datetime):
-            return obj.strftime(datetime_format)
-        elif isinstance(obj, datetime.date):
+        if isinstance(obj, datetime.date):
             return obj.strftime(date_format)
+        elif isinstance(obj, datetime.datetime):
+            return obj.strftime(datetime_format)
         elif isinstance(obj, db.Key):
             return str(obj)
         elif isinstance(obj, db.Model):

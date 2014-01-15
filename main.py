@@ -226,8 +226,10 @@ class _APIHandler(webapp2.RequestHandler):
         if key == 'dateofbirth':
             return datetime.datetime.strptime(value, date_format).date()
 
-        if isinstance(value, datetime.datetime):
-            return datetime.datetime.strptime(value, datetime_format)
+        try:
+            result = datetime.datetime.strptime(value, datetime_format)
+            return result
+        except: pass
 
         if value == 'true':
             return True

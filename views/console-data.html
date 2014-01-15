@@ -216,7 +216,7 @@
         //This switch will deal with properties that can't or shouldn't be edited in the console.
         switch (property.type) {
 
-            case 'readonly':
+            case 'copyme':
                 //Create a readonly text entry that allows the user to easily copy the id of the record.
                 var entry = $('<input type="text" readonly/>').appendTo(cell)
                 entry.val(value);
@@ -227,6 +227,10 @@
                 });
                 //Make it auto-select all text when clicked on.
                 entry.click(function() { $(this).select(); });
+                return;
+
+            case 'readonly':
+                cell.append(value);
                 return;
 
             case 'headshot':
@@ -310,8 +314,13 @@
                 };
                 break;
 
-            case 'datetime':
-                options['format'] = 'yyyy-mm-dd hh:ii:ss'
+            case 'combodate':
+                options['format'] = 'YYYY-MM-DD';
+                options['inputclass'] = 'input-sm'
+                options['combodate'] = {
+                    'minYear': 1900,
+                    'maxYear': new Date().getFullYear()
+                };
                 break;
 
         }

@@ -10,37 +10,37 @@ names:
 
 namePrefixes: &prefixes
     - {value: '', text: ''}
-    - {value: Ms., text: Miss}
-    - {value: Mrs., text: Missis}
-    - {value: Mr., text: Mister}
-    - {value: Rev., text: Reverend}
-    - {value: Dr., text: Doctor}
+    - {value: Ms., text: Ms.}
+    - {value: Mrs., text: Mrs.}
+    - {value: Mr., text: Mr.}
+    - {value: Rev., text: Rev.}
+    - {value: Dr., text: Dr.}
 
 nameSuffixes: &suffixes
     - {value: '', text: ''}
-    - {value: I, text: the First}
-    - {value: II, text: the Second}
-    - {value: III, text: the Third}
-    - {value: IV, text: the Fourth}
-    - {value: V, text: the Fifth}
-    - {value: Jr., text: Junior}
-    - {value: Sr., text: Senior}
-    - {value: Esq., text: Esquire}
+    - {value: I, text: I}
+    - {value: II, text: II}
+    - {value: III, text: III}
+    - {value: IV, text: IV}
+    - {value: V, text: V}
+    - {value: Jr., text: Jr.}
+    - {value: Sr., text: Sr.}
+    - {value: Esq., text: Esq.}
 
 truefalse: &truefalse
-    - {value: !!str true, text: !!str Yes}
-    - {value: !!str false, text: !!str No}
+    - {value: !!str true, text: !!str true}
+    - {value: !!str false, text: !!str false}
 
 sexes: &sexes
-    - {value: male, text: Male}
-    - {value: female, text: Female}
-    - {value: intersex, text: Intersex}
+    - {value: male, text: male}
+    - {value: female, text: female}
+    - {value: intersex, text: intersex}
 
 properties:
 
     client:
     -   name: id
-        type: readonly
+        type: copyme
         required: null
 
     -   name: headshot
@@ -70,7 +70,7 @@ properties:
         options: *suffixes
 
     -   name: dateofbirth
-        type: date
+        type: combodate
         required: true
 
     -   name: sex
@@ -84,7 +84,7 @@ properties:
 
     provider:
     -   name: id
-        type: readonly
+        type: copyme
         required: null
 
     -   name: headshot
@@ -128,7 +128,7 @@ properties:
 
     ticket:
     -   name: id
-        type: readonly
+        type: copyme
         required: null
 
     -   name: qrcode
@@ -146,5 +146,5 @@ properties:
         options: *truefalse
 
     -   name: opened
-        type: datetime
+        type: readonly
         required: null

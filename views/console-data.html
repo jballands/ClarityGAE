@@ -248,11 +248,17 @@
                     break;
                 }
 
+                //If the reference model is null (meaning it has been removed), let the user know and keep on truckin'.
+                if (value == null) {
+                    cell.append('<em>removed</em>')
+                    return;
+                }
+
                 //Generate the button text based on what foreign model is being loaded.
                 var text = 'View'
-                if (property.model == 'client') {text = value.name_first + ' ' + value.name_last;}
+                if (property.model == 'client') {text = value['name_first'] + ' ' + value['name_last'];}
 
-                //Put it all together into a purple button sandwich
+                //Put it all together into a purple button sandwich.
                 var entry = $(String.format('<button class="btn btn-sm btn-info" model="{0}" modelid="{1}">{2}</button>',
                         property.model,
                         value.id,

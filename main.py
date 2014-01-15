@@ -141,23 +141,12 @@ class CronHandler(webapp2.RequestHandler):
 datetime_format = '%Y-%m-%d %H:%M:%S'
 date_format = '%Y-%m-%d'
 
-def stripDateAndOrTime(string):
-    for format in [date_format, datetime_format]:
-        try:
-            result = datetime.datetime.strptime(string, format)
-            if format == date_format:
-                result = result.date()
-            return result
-        except: pass
-
-    return None
-
 class APIJSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, datetime.date):
-            return obj.strftime(date_format)
-        elif isinstance(obj, datetime.datetime):
+        if isinstance(obj, datetime.datetime):
             return obj.strftime(datetime_format)
+        elif isinstance(obj, datetime.date):
+            return obj.strftime(date_format)
         elif isinstance(obj, db.Key):
             return str(obj)
         elif isinstance(obj, db.Model):
@@ -176,6 +165,9 @@ class APIJSONEncoder(json.JSONEncoder):
                     if kvs[key] is None: continue
                     reference = properties[key].reference_class.get(kvs[key])
                     kvs[key] = reference
+
+                elif key == 'dateofbirth':
+                    kvs[key] = kvs[key].date()
 
             kvs['id'] = obj.key()
             return kvs
@@ -231,14 +223,16 @@ class _APIHandler(webapp2.RequestHandler):
             return value if re.match(r'clarity[a-f0-9]{32}$', value) is not None else None
         if key == 'binary':
             return base64.b64decode(value)
+        if key == 'dateofbirth':
+            return datetime.datetime.strptime(value, date_format).date()
+
+        if isinstance(value, datetime.datetime):
+            return datetime.datetime.strptime(value, datetime_format)
 
         if value == 'true':
             return True
         if value == 'false':
             return False
-
-        time = stripDateAndOrTime(value)
-        if time: return time
 
         return value
 

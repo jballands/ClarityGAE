@@ -15,7 +15,7 @@ import jinja2
 
 from google.appengine.ext import db
 from google.appengine.api import users
-from google.appengine.ext import blobstore
+#from google.appengine.ext import blobstore
 
 import models
 
@@ -155,9 +155,10 @@ class APIJSONEncoder(json.JSONEncoder):
             kvs = db.to_dict(obj)
             
             kvs.pop('password', None)
+            kvs.pop('binary', None)
 
-            if 'binary' in kvs and kvs['binary'] is not None:
-                kvs['binary'] = base64.b64encode(kvs['binary'])
+            #if 'binary' in kvs and kvs['binary'] is not None:
+            #    kvs['binary'] = base64.b64encode(kvs['binary'])
 
             for key in kvs:
 
@@ -177,15 +178,15 @@ class APIJSONEncoder(json.JSONEncoder):
             except TypeError:
                 return 'CANNOT_SERIALIZE'
 
-class APIJSONDecoder(json.JSONDecoder):
-    def decode(self, obj):
-        result = None
-        try:
-            result = datetime.strptime(obj, date_format).date
-            result = datetime.strptime(obj, datetime_format)
-        except: pass
-        if result: return result
-        return json.JSONDecoder.decode(self, obj)
+# class APIJSONDecoder(json.JSONDecoder):
+#     def decode(self, obj):
+#         result = None
+#         try:
+#             result = datetime.strptime(obj, date_format).date
+#             result = datetime.strptime(obj, datetime_format)
+#         except: pass
+#         if result: return result
+#         return json.JSONDecoder.decode(self, obj)
 
 class _APIHandler(webapp2.RequestHandler):
     _secure = True
@@ -202,10 +203,14 @@ class _APIHandler(webapp2.RequestHandler):
 
         self.args = {}
         
-        for argument in arguments:
-            self.args[argument] = self.argDecode(argument, self.request.get(argument))
-        if 'pk' in arguments:
-            self.args['value'] = self.argDecode(self.args['name'], self.args['value'])
+        try:
+            for argument in arguments:
+                self.args[argument] = self.argDecode(argument, self.request.get(argument))
+            if 'pk' in arguments:
+                self.args['value'] = self.argDecode(self.args['name'], self.args['value'])
+        except ValueError:
+            self.error(401)
+            return
 
         function = 'api_' + action
         if hasattr(self, function):
@@ -286,19 +291,20 @@ class _APIModelHandler(_APIHandler):
         for arg in args:
             if arg == 'token': continue
             if not arg in valid:
-                logging.info('MISSING ' + arg)
+                logging.info('INVALID ' + arg + ' ' + repr(self._model))
                 self.error(401)
                 return
             value = self.args[arg]
             if isinstance(properties[arg], db.ReferenceProperty):
-                foreignModel = properties[arg].reference_class
-                foreignKey = value
-                try:
-                    foreignInstance = foreignModel.get(foreignKey)
-                except:
-                    self.error(401)
-                    return
-                value = foreignInstance
+                if not isinstance(value, db.Model):
+                    foreignModel = properties[arg].reference_class
+                    foreignKey = value
+                    try:
+                        foreignInstance = foreignModel.get(foreignKey)
+                    except:
+                        self.error(401)
+                        return
+                    value = foreignInstance
             elif arg == 'password':
                 value = hashlib.md5(value).hexdigest()
             elif arg == 'admin':
@@ -487,11 +493,22 @@ class APIHeadshotHandler(_APIModelHandler):
             self.error(401)
             return
 
-        self.response.headers['Content-Type'] = instance.mimetype
+        self.response.headers['Content-Type'] = str(instance.mimetype)
         self.response.write(instance.binary)
 
 class APIClientHandler(_APIModelHandler):
     _model = models.Client
+    def api_create(self):
+        image = self.args.pop('binary', None)
+        if image:
+
+            #headshot = models.Headshot(binary=db.Blob(image))
+            headshot = models.Headshot()
+            #headshot.binary = db.Blob(image)
+            headshot.binary = image
+            headshot.put()
+            self.args['headshot'] = headshot
+        _APIModelHandler.api_create(self)
 
 class APITicketHandler(_APIModelHandler):
     _model = models.Ticket

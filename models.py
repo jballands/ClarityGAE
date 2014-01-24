@@ -6,7 +6,7 @@ from google.appengine.api import users
 from google.appengine.ext import blobstore
 
 class Headshot(db.Model):
-    binary = db.BlobProperty(required=True)
+    binary = db.BlobProperty(required=False)
     mimetype = db.StringProperty(required=False, default='image/jpeg')
 
 class Provider(db.Model):
@@ -51,7 +51,7 @@ class Client(db.Model):
     sex = db.StringProperty(required=True)
     location = db.StringProperty(required=False)
 
-    headshot = blobstore.BlobReferenceProperty(required=False)
+    headshot = db.ReferenceProperty(Headshot, required=False)
 
 class Ticket(db.Model):
     isopen = db.BooleanProperty(required=False, default=True)

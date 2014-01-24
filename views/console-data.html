@@ -240,8 +240,14 @@
                 else {
                     var markup = '<button class="btn btn-sm btn-info"><span class="glyphicon glyphicon-picture"></span></button>';
                     var button = $(markup).appendTo(cell);
-                    //button.attr('model', data_current);
-                    //button.attr('modelid', )
+                    var url = String.format('/api/headshot_download?token={0}&id={1}', session, value['id']);
+                    button.attr('href', url);
+
+                    //Bind the button to open a bootbox alert with the image.
+                    button.click(function() {
+                        var markup = String.format('<div style="text-align:center;"><h2>Headshot</h2><hr><img src="{0}"></div>', $(this).attr('href'));
+                        bootbox.alert(markup);
+                    });
                 }
                 return;
 

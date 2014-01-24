@@ -3,14 +3,42 @@
 
     <!-- Button row for selecting model -->
     <div class="row">
-        <div class="col-md-10 col-md-offset-1">
+
+        <div class="col-md-5 col-md-offset-1">
             <div class="panel panel-default">
                 <div class="panel-heading"><span class="glyphicon glyphicon-tasks"></span> Data types <span class="pull-right"><em>Click to change or reload</em></span></div>
-                <div class="panel-body" style="text-align: center;" id="data_buttonRow">
-                    <button class="btn btn-primary" disabled>_______</button>
+                <div class="panel-body" id="data_buttonRow" style="text-align: center;">
+                    <button class="btn btn-primary" disabled>Loading...</button>
                 </div>
             </div>
         </div>
+
+        <div class="col-md-5">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <span class="glyphicon glyphicon-wrench"></span> Data Controls
+                </div>
+                <div class="panel-body" style="text-align: center;">
+
+                    <button class="btn btn-primary load-disable" id="data_buttonDeleteRecord">
+                        <span class="glyphicon glyphicon-fire"></span>
+                        Delete Selected
+                    </button>
+
+                    <button class="btn btn-primary load-disable" id="data_buttonCreateRecord">
+                        <span class="glyphicon glyphicon-plus"></span>
+                        Create New
+                    </button>
+
+                    <button class="btn btn-primary load-disable" id="data_buttonRefresh">
+                        <span class="glyphicon glyphicon-refresh"></span>
+                        Refresh
+                    </button>
+
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <div class="row">
@@ -18,41 +46,41 @@
             <div class="panel panel-info">
                 <div class="panel-heading"><span class="glyphicon glyphicon-filter"></span> Data Filters</div>
                 <div class="panel-body">
-                    <div class="alert alert-info col-md-8 col-md-offset-2">
-                        filterrrrrrrrrrr
-                        <button class="btn btn-xs btn-default pull-right load-disable" data-dismiss="alert">Remove</button>
-                    </div>
-                    <div class="col-md-3 col-md-offset-1">
+                    
+                    <div class="col-md-4">
                         <select class="form-control load-disable" id="data_filterSelect">
                             <option value="" selected disabled>Field</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <input type="text" class="form-control load-disable" id="data_filterInput" placeholder="Value" />
                     </div>
                     <div class="col-md-1">
                         <label>
-                            <input type="checkbox" class="form-control input-sm load-disable" id="data_filterInput" disabled/> Exactly
+                            <input type="checkbox" class="form-control load-disable" id="data_filterInput" style="height:1em;" disabled/> Exactly
                         </label>
                     </div>
                     <div class="col-md-3">
                         <button class="btn btn-info btn-block load-disable" id="data_buttonFilter" disabled>Add Filter</button>
                     </div>
+
+
+                </div>
+                <div class="panel-footer" id="data_filterList">
+                    <div class="row">
+                        <div class="col-md-10 col-md-offset-1">
+
+                            <div class="alert alert-info">
+                                This is an example <strong>filter</strong>. This is what a real <em>filter</em> will look like once they are implemented. But for now, they are just a <code>WIP</code>.
+                                <button class="btn btn-xs btn-default pull-right" data-dismiss="alert">Remove</button>
+                            </div>
+
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <div class="row">
-        <div class="col-md-5 col-md-offset-1">
-            <button class="btn btn-block btn-danger load-disable" id="data_buttonDeleteRecord"><span class="glyphicon glyphicon-fire"></span> Delete Selected</button>
-        </div>
-        <div class="col-md-5">
-            <button class="btn btn-block btn-primary load-disable" id="data_buttonCreateRecord">Create New</button>
-        </div>
-    </div>
-
-    <hr>
 
     <div class="loader" id="data_loader" style="margin-left:auto;margin-right:auto;" hidden>
     </div>
@@ -121,7 +149,6 @@
 <script type="text/javascript">
     var data_config = {};
     var data_current = '';
-    var currentModel = '';
 
     function data_errorHandler(xhr, status, error) {
         var template = '<h4>An error occurred while trying to process your request.</h4><br><div class="alert alert-warning"><small><em>{0}</em><br>{1}</small></div>';
@@ -149,7 +176,7 @@
         $('#data_tableBody').children().remove();
         $('#data_loader').prop('hidden', false);
 
-        if (model == null) {
+        if (typeof(model) != 'string') {
             model = data_current;
         }
 
@@ -171,6 +198,9 @@
             }
         })
     }
+
+    //Bind the refresh button to the dataLoad function.
+    $('#data_buttonRefresh').click(data_dataLoad);
 
     function data_dataParse(data, status, xhr) {
         var model = data_current;
@@ -254,7 +284,7 @@
                     cell.append('<span class="glyphicon glyphicon-remove"></span>');
                 }
                 else {
-                    var markup = '<button class="btn btn-sm btn-info"><span class="glyphicon glyphicon-picture"></span></button>';
+                    var markup = '<button class="btn btn-sm btn-success"><span class="glyphicon glyphicon-picture"></span></button>';
                     var button = $(markup).appendTo(cell);
                     var url = String.format('/api/headshot_download?token={0}&id={1}', session, value['id']);
                     button.attr('href', url);
@@ -285,7 +315,7 @@
                 if (property.model == 'client') {text = value['name_first'] + ' ' + value['name_last'];}
 
                 //Put it all together into a purple button sandwich.
-                var entry = $(String.format('<button class="btn btn-sm btn-info" model="{0}" modelid="{1}">{2}</button>',
+                var entry = $(String.format('<button class="btn btn-sm btn-success" model="{0}" modelid="{1}">{2}</button>',
                         property.model,
                         value.id,
                         text

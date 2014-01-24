@@ -1,38 +1,54 @@
 <div class="tab-pane fade" id="tab-data">
     <br>
 
-    <div class="row well well-sm">
-        <div class="col-md-10 col-md-offset-1" style="text-align: center;" id="data_buttonRow">
-            Click to change data type or reload:&nbsp;
-            <button class="btn btn-primary" disabled>_______</button>
-        </div>
-    </div>
-
-    <div class="row well">
-        <div class="col-md-3 col-md-offset-1">
-            <select class="form-control" id="data_filterSelect" disabled>
-                <option value="" disabled selected>Field</option>
-            </select>
-        </div>
-        <div class="col-md-4">
-            <input type="text" class="form-control" id="data_filterInput" placeholder="Value" disabled/>
-        </div>
-        <div class="col-md-3">
-            <button class="btn btn-default btn-block" id="data_buttonFilter" disabled>Filter Data</button>
-        </div>
-    </div>
-
-    <hr>
-
+    <!-- Button row for selecting model -->
     <div class="row">
-        <div class="col-md-10 col-md-offset-1" style="text-align: center;">
-            <button class="btn btn-block btn-primary" id="data_buttonCreateRecord" disabled>Create New</button>
+        <div class="col-md-10 col-md-offset-1">
+            <div class="panel panel-default">
+                <div class="panel-heading"><span class="glyphicon glyphicon-tasks"></span> Data types <span class="pull-right"><em>Click to change or reload</em></span></div>
+                <div class="panel-body" style="text-align: center;" id="data_buttonRow">
+                    <button class="btn btn-primary" disabled>_______</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-10 col-md-offset-1" style="text-align: center;">
-            <button class="btn btn-block btn-danger" id="data_buttonDeleteRecord" disabled>Delete Selected</button>
+        <div class="col-md-10 col-md-offset-1">
+            <div class="panel panel-info">
+                <div class="panel-heading"><span class="glyphicon glyphicon-filter"></span> Data Filters</div>
+                <div class="panel-body">
+                    <div class="alert alert-info col-md-8 col-md-offset-2">
+                        filterrrrrrrrrrr
+                        <button class="btn btn-xs btn-default pull-right load-disable" data-dismiss="alert">Remove</button>
+                    </div>
+                    <div class="col-md-3 col-md-offset-1">
+                        <select class="form-control load-disable" id="data_filterSelect">
+                            <option value="" selected disabled>Field</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" class="form-control load-disable" id="data_filterInput" placeholder="Value" />
+                    </div>
+                    <div class="col-md-1">
+                        <label>
+                            <input type="checkbox" class="form-control input-sm load-disable" id="data_filterInput" disabled/> Exactly
+                        </label>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-info btn-block load-disable" id="data_buttonFilter" disabled>Add Filter</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-5 col-md-offset-1">
+            <button class="btn btn-block btn-danger load-disable" id="data_buttonDeleteRecord"><span class="glyphicon glyphicon-fire"></span> Delete Selected</button>
+        </div>
+        <div class="col-md-5">
+            <button class="btn btn-block btn-primary load-disable" id="data_buttonCreateRecord">Create New</button>
         </div>
     </div>
 
@@ -118,7 +134,7 @@
         for (i in data_config.models) {
             var model = data_config.models[i];
             var modelName = data_config.names[model];
-            var markup = String.format('<button class="buttonModelLoad btn btn-default" model="{0}">{1}</button>&nbsp;', model, modelName);
+            var markup = String.format('<button class="buttonModelLoad btn btn-default load-disable" model="{0}">{1}</button>&nbsp;', model, modelName);
             $('#data_buttonRow').append(markup);
         }
 
@@ -128,7 +144,7 @@
     }
 
     function data_dataLoad(model, query, offset) {
-        $('.buttonModelLoad').prop('disabled', true);
+        $('.load-disable').prop('disabled', true);
         $('#data_tableHead').children().remove();
         $('#data_tableBody').children().remove();
         $('#data_loader').prop('hidden', false);
@@ -150,7 +166,7 @@
             'success': data_dataParse,
             'error': data_errorHandler,
             'complete': function() {
-                $('.buttonModelLoad').prop('disabled', false);
+                $('.load-disable').prop('disabled', false);
                 $('#data_loader').prop('hidden', true);
             }
         })
@@ -500,6 +516,9 @@
     });    
 
     $(document).ready(function() {
+        //Disable the model controls
+        $('.load-disable').prop('disabled', true);
+
         //Load up the configuartion
         $.ajax({
             'url': '/static/data/data-config.json',

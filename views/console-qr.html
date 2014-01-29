@@ -1,39 +1,55 @@
 <div class="tab-pane fade" id="tab-qr">
-    <div class="container">
-        <h1>QR Label Generator</h1>
-        
-        <p>Generates rows of five indentical QR labels specifically designed for use with the Clarity Android app.</p>
 
-        <label>Presets</label>
+    <div class="row">
+        <div class="col-md-10 col-md-offset-1">
+            <h1>QR Label Generator</h1>
+            <p>Generates rows of five indentical QR labels specifically designed for use with the Clarity Android app.</p>
+        </div>
+    </div>
 
-        {% macro genbutton(amount) -%}
-        <p>
-            <a class="btn btn-primary btn-block qr-genbutton" amount="{{ amount }}" href="/console/qr?amount={{ amount }}" target="_blank">Generate {{ amount }} rows</a>
-        </p>
-        {%- endmacro %}
+    <br>
 
-        {{ genbutton(25) }}
-        {{ genbutton(100) }}
-        {{ genbutton(250) }}
-        {{ genbutton(500) }}
+    <div class="row">
+        <div class="col-md-10 col-md-offset-1">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    Generate a preset amount
+                </div>
+                <div class="panel-body" style="text-align: center;">
+                    {% macro genbutton(amount) -%}
+                    <a class="btn btn-lg btn-primary" href="/console/qr?amount={{ amount }}" target="_blank">{{ amount }}</a>
+                    {%- endmacro %}
 
-        <hr>
+                    {{ genbutton(6) }}
+                    {{ genbutton(12) }}
+                    {{ genbutton(24) }}
+                    {{ genbutton(100) }}
+                    {{ genbutton(250) }}
+                    {{ genbutton(500) }}
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <label>Custom</label>
-        <input type="text" class="form-control" placeholder="Number of Rows" id="qr-custominput" style="
-            border-bottom-left-radius: 0;
-            border-bottom-right-radius: 0;
-        ">
-        <button class="btn btn-primary btn-block" id="qr-custombutton" style="
-            border-top-left-radius: 0;
-            border-top-right-radius: 0;
-        ">Generate</button>
-
+    <div class="row">
+        <div class="col-md-10 col-md-offset-1">
+            <div class="well">
+                <h5>Generate a custom amount</h5>
+                <div class="row">
+                    <div class="col-md-7">
+                        <input type="text" class="form-control" id="qr_custominput" placeholder="Amount">
+                    </div>
+                    <div class="col-md-5">
+                        <button class="btn btn-primary btn-block" id="qr_custombutton">Generate</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
-        $('#qr-custombutton').click(function() {
-            var amount = $('#qr-custominput').val();
+        $('#qr_custombutton').click(function() {
+            var amount = $('#qr_custominput').val();
             if(!amount){return;}
             open('/console/qr?amount=' + amount);
         });

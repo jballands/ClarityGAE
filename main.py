@@ -282,6 +282,7 @@ class _APIHandler(webapp2.RequestHandler):
 
 class _APIModelHandler(_APIHandler):
     _model = object
+
     def api_create(self):
         properties = self._model.properties()
         valid = properties.keys()
@@ -329,50 +330,35 @@ class _APIModelHandler(_APIHandler):
             except db.KindError:
                 self.error(401)
                 return
-            #data = self.resolve_properties(instance)
-            data = instance
-        elif 'ids' in args:
-            data = []
-            try:
-                keylist = json.loads(self.request.get('ids'))
-            except ValueError:
-                self.error(401)
-                return
-            for key in keylist:
-                try:
-                    instance = self._model.get(key)
-                    data.append(self.resolve_properties(instance))
-                except:
-                    data.append(None)
+            json.dump(instance, self.response, skipkeys=True, cls=APIJSONEncoder)
         else:
-            nolimit = self.request.get('nolimit', '') == 'true'
-            runlimit = 100
-            if nolimit:
-                runlimit = None
-            #data = [self.resolve_properties(model) for model in self._model.all().run(limit=runlimit)]
-            data = list(self._model.all().run(limit=runlimit))
-            #json.dump(models, self.response, skipkeys=True, cls=APIJSONEncoder)
-        json.dump(data, self.response, skipkeys=True, cls=APIJSONEncoder)
+            self.error(401)
+            return
 
     def api_query(self):
         valid = self._model.properties().keys()
-        args = self.request.arguments()
-        args.remove('token')
-        if not args:
-            self.error(401)
-            return
+        args = self.args
+        args.pop('token')
+
+        runlimit = int(args.pop('limit', 100))
+        runoffset = int(args.pop('offset', 0))
+
         query = self._model.all()
         for arg in args:
             if not arg in valid:
                 self.error(401)
                 return
             query = query.filter(arg + ' =', self.request.get(arg, ''))
-        # if not query.get():
-        #     self.error(404)
-        #     return
-        json.dump(
-            [self.resolve_properties(instance) for instance in query],
-        self.response, skipkeys=True, cls=APIJSONEncoder)
+
+        data = {
+            'count': query.count(),
+            'result': query.fetch(
+                limit = runlimit,
+                offset = runoffset
+            )
+        }
+
+        json.dump(data, self.response, skipkeys=True, cls=APIJSONEncoder)
 
     def api_remove(self):
         args = self.args

@@ -34,7 +34,6 @@ truefalse: &truefalse
 sexes: &sexes
     - {value: male, text: male}
     - {value: female, text: female}
-    - {value: intersex, text: intersex}
 
 properties:
 

@@ -18,6 +18,7 @@
                 <div class="panel-heading">
                     <span class="glyphicon glyphicon-wrench"></span> Data Controls
                 </div>
+                <div class="panel-collapse collapse in">
                 <div class="panel-body" style="text-align: center;">
 
                     <button class="btn btn-primary load-disable" id="data_buttonDeleteRecord">
@@ -35,6 +36,7 @@
                         Refresh
                     </button>
 
+                </div>
                 </div>
             </div>
         </div>
@@ -660,6 +662,8 @@
                 bootbox.alert(String.format('The data view configuration file failed to load. Try reloading the page.<br><br><div class="alert alert-warning">{0}</div>', error));
             }
         });
+
+        $('.collapse').collapse('hide');
     });
     
 </script>

@@ -194,8 +194,8 @@ class _APIHandler(webapp2.RequestHandler):
     def route(self, action):
         if self._secure:
             token = self.request.get('token', None)
-            session = self.session_from_token(token)
-            if not session or (self._elevated and not session.user.admin):
+            self.session = self.session_from_token(token)
+            if not self.session or (self._elevated and not session.user.admin):
                 self.error(403)
                 return
 
@@ -211,6 +211,9 @@ class _APIHandler(webapp2.RequestHandler):
         except ValueError:
             self.error(401)
             return
+
+        #Remove the token argument
+        self.args.pop('token', None)
 
         function = 'api_' + action
         if hasattr(self, function):
@@ -318,7 +321,8 @@ class _APIModelHandler(_APIHandler):
         }, self.response, cls=APIJSONEncoder)
 
     def api_get(self):
-        args = self.request.arguments()
+        #args = self.request.arguments()
+        args = self.args
         data = None
         if 'id' in args:
             instancekey = self.args.get('id', '')
@@ -332,13 +336,21 @@ class _APIModelHandler(_APIHandler):
                 return
             json.dump(instance, self.response, skipkeys=True, cls=APIJSONEncoder)
         else:
-            self.error(401)
-            return
+            field = args.keys()[0]
+            valid = self._model.properties().keys()
+            if not field in valid:
+                self.error(401)
+                return
+            instance = self._model.all().filter(field + ' =', args[field]).get()
+            if not instance:
+                self.error(404)
+                return
+            json.dump(instance, self.response, skipkeys=True, cls=APIJSONEncoder)
 
     def api_query(self):
         valid = self._model.properties().keys()
         args = self.args
-        args.pop('token')
+        #args.pop('token')
 
         runlimit = int(args.pop('limit', 100))
         runoffset = int(args.pop('offset', 0))

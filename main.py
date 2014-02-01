@@ -199,7 +199,7 @@ class _APIHandler(webapp2.RequestHandler):
         #403 errors
         403: 'Forbidden',
         403.1: 'Invalid session; try logging in again',
-        403.2: 'Only Providers have access to this function',
+        403.2: 'Only admins have access to this function',
 
         #404 errors
         404: 'Not found',
@@ -213,7 +213,6 @@ class _APIHandler(webapp2.RequestHandler):
     def route(self, action):
         if self._secure:
             token = self.request.get('token', None)
-<<<<<<< HEAD
             session = self.session_from_token(token)
 
             if not session:
@@ -221,12 +220,6 @@ class _APIHandler(webapp2.RequestHandler):
 
             if action in self._restricted and not session.user.admin:
                 return self.error(403.2)
-=======
-            self.session = self.session_from_token(token)
-            if not self.session or (self._elevated and not session.user.admin):
-                self.error(403)
-                return
->>>>>>> 01f9e12a29855b47824dcc78f144899c463a5e58
 
         arguments = self.request.arguments()
 

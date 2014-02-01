@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import math
 import uuid
 import base64
 import random
@@ -189,15 +190,36 @@ class APIJSONEncoder(json.JSONEncoder):
 #         return json.JSONDecoder.decode(self, obj)
 
 class _APIHandler(webapp2.RequestHandler):
+
+    _errors = {
+        #401 errors
+        401: 'Unauthorized',
+        401.1: 'Malformed data',
+
+        #403 errors
+        403: 'Forbidden',
+        403.1: 'Invalid session; try logging in again',
+        403.2: 'Only Providers have access to this function',
+
+        #404 errors
+        404: 'Not found',
+        404.1: 'Model not found',
+    }
+
     _secure = True
-    _elevated = False
+    
+    _restricted = ['remove',]
+
     def route(self, action):
         if self._secure:
             token = self.request.get('token', None)
             session = self.session_from_token(token)
-            if not session or (self._elevated and not session.user.admin):
-                self.error(403)
-                return
+
+            if not session:
+                return self.error(403.1)
+
+            if action in self._restricted and not session.user.admin:
+                return self.error(403.2)
 
         arguments = self.request.arguments()
 
@@ -219,6 +241,13 @@ class _APIHandler(webapp2.RequestHandler):
             self.error(404)
     post = route
     get = route
+
+    def error(self, floatcode):
+        intcode = int(math.floor(floatcode))
+        webapp2.RequestHandler.error(self, intcode)
+
+        if floatcode in self._errors:
+            json.dump(self._errors[floatcode], self.response, cls=APIJSONEncoder)
 
     @staticmethod
     def argDecode(key, value):
@@ -436,16 +465,14 @@ class APISessionHandler(_APIHandler):
         session.expiration = session.creation + datetime.timedelta(days=1)
         session.put()
 
-        self.response.write(json.dumps({
-            'token': str(session.key()),
-            'provider': {
-                'name_prefix': user.name_prefix,
-                'name_first': user.name_first,
-                'name_middle': user.name_middle,
-                'name_last': user.name_last,
-                'name_suffix': user.name_suffix,
-            }
-        }))
+        #self.response.write(json.dumps({
+        #    'token': str(session.key()),
+        #    'provider': session.user
+        #}))
+        json.dump({
+            'token': session.key(),
+            'provider': session.user
+        }, self.response, skipkeys=True, cls=APIJSONEncoder)
 
     def api_end(self):
         token = self.request.get('token', '')
@@ -463,8 +490,12 @@ class APISessionHandler(_APIHandler):
         session.put()
 
 class APIProviderHandler(_APIModelHandler):
-    _restricted = True
     _model = models.Provider
+    _restricted = [
+        'create',
+        'remove',
+        'console_update'
+    ]
 
 class APIHeadshotHandler(_APIModelHandler):
     _model = models.Headshot

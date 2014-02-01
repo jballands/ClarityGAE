@@ -213,6 +213,7 @@ class _APIHandler(webapp2.RequestHandler):
     def route(self, action):
         if self._secure:
             token = self.request.get('token', None)
+<<<<<<< HEAD
             session = self.session_from_token(token)
 
             if not session:
@@ -220,6 +221,12 @@ class _APIHandler(webapp2.RequestHandler):
 
             if action in self._restricted and not session.user.admin:
                 return self.error(403.2)
+=======
+            self.session = self.session_from_token(token)
+            if not self.session or (self._elevated and not session.user.admin):
+                self.error(403)
+                return
+>>>>>>> 01f9e12a29855b47824dcc78f144899c463a5e58
 
         arguments = self.request.arguments()
 
@@ -233,6 +240,9 @@ class _APIHandler(webapp2.RequestHandler):
         except ValueError:
             self.error(401)
             return
+
+        #Remove the token argument
+        self.args.pop('token', None)
 
         function = 'api_' + action
         if hasattr(self, function):
@@ -347,7 +357,8 @@ class _APIModelHandler(_APIHandler):
         }, self.response, cls=APIJSONEncoder)
 
     def api_get(self):
-        args = self.request.arguments()
+        #args = self.request.arguments()
+        args = self.args
         data = None
         if 'id' in args:
             instancekey = self.args.get('id', '')
@@ -361,13 +372,21 @@ class _APIModelHandler(_APIHandler):
                 return
             json.dump(instance, self.response, skipkeys=True, cls=APIJSONEncoder)
         else:
-            self.error(401)
-            return
+            field = args.keys()[0]
+            valid = self._model.properties().keys()
+            if not field in valid:
+                self.error(401)
+                return
+            instance = self._model.all().filter(field + ' =', args[field]).get()
+            if not instance:
+                self.error(404)
+                return
+            json.dump(instance, self.response, skipkeys=True, cls=APIJSONEncoder)
 
     def api_query(self):
         valid = self._model.properties().keys()
         args = self.args
-        args.pop('token')
+        #args.pop('token')
 
         runlimit = int(args.pop('limit', 100))
         runoffset = int(args.pop('offset', 0))

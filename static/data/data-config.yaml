@@ -39,111 +39,185 @@ properties:
 
     client:
     -   name: id
-        type: copyme
-        required: null
+        type: readonly
+        in_table: false
+        in_edit: true
+        in_create: false
+        required: false
 
     -   name: headshot
         type: headshot
-        required: null
+        in_table: true
+        in_edit: false
+        in_create: false
+        required: false
 
     -   name: name_prefix
         type: select
+        in_table: false
+        in_edit: true
+        in_create: true
         required: false
         options: *prefixes
 
     -   name: name_first
         type: text
+        in_table: true
+        in_edit: true
+        in_create: true
         required: true
 
     -   name: name_middle
         type: text
+        in_table: false
+        in_edit: true
+        in_create: true
         required: false
 
     -   name: name_last
         type: text
+        in_table: true
+        in_edit: true
+        in_create: true
         required: true
 
     -   name: name_suffix
         type: select
+        in_table: false
+        in_edit: true
+        in_create: true
         required: false
         options: *suffixes
 
     -   name: dateofbirth
         type: combodate
+        in_table: true
+        in_edit: true
+        in_create: true
         required: true
 
     -   name: sex
         type: select
+        in_table: true
+        in_edit: true
+        in_create: true
         required: true
         options: *sexes
 
     -   name: location
         type: textarea
+        in_table: false
+        in_edit: true
+        in_create: true
         required: false
 
     provider:
     -   name: id
-        type: copyme
-        required: null
+        type: readonly
+        in_table: false
+        in_edit: true
+        in_create: false
+        required: false
 
     -   name: headshot
         type: headshot
-        required: null
+        in_table: true
+        in_edit: false
+        in_create: false
+        required: false
 
     -   name: name_prefix
         type: select
+        in_table: false
+        in_edit: true
+        in_create: true
         required: false
         options: *prefixes
 
     -   name: name_first
         type: text
+        in_table: true
+        in_edit: true
+        in_create: true
         required: true
 
     -   name: name_middle
         type: text
+        in_table: false
+        in_edit: true
+        in_create: true
         required: false
 
     -   name: name_last
         type: text
+        in_table: true
+        in_edit: true
+        in_create: true
         required: true
 
     -   name: name_suffix
         type: select
+        in_table: false
+        in_edit: true
+        in_create: true
         required: false
         options: *suffixes
 
     -   name: username
         type: text
+        in_table: true
+        in_edit: true
+        in_create: true
         required: true
 
     -   name: password
         type: password
+        in_table: false
+        in_edit: true
+        in_create: true
         required: true
 
     -   name: admin
         type: select
+        in_table: true
+        in_edit: true
+        in_create: true
         required: true
         options: *truefalse
 
     ticket:
     -   name: id
-        type: copyme
-        required: null
+        type: readonly
+        in_table: false
+        in_edit: true
+        in_create: false
+        required: false
 
     -   name: qrcode
-        type: text
+        type: qrcode
+        in_table: true
+        in_edit: false
+        in_create: false
         required: false
 
     -   name: client
         type: model
         model: client
+        in_table: true
+        in_edit: true
+        in_create: true
         required: true
-
-    -   name: isopen
-        type: select
-        required: null
-        options: *truefalse
 
     -   name: opened
         type: readonly
-        required: null
+        in_table: true
+        in_edit: false
+        in_create: false
+        required: false
+
+    -   name: closed
+        type: readonly
+        in_table: true
+        in_edit: false
+        in_create: false
+        required: false

@@ -118,13 +118,13 @@
 
 
 <div class="modal fade" id="data_modalCreateRecord" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog" style="width:90%;">
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title">Insert a New Record</h4>
             </div>
             <div class="modal-body">
-                <blockquote><em>Be aware that newly inserted records may take some time to propagate through the database (typically less than 1 minute).<br>
+                <blockquote><em>Be aware that newly inserted records may take some time to propagate throughout the database (typically less than 1 minute).<br>
                 <br>
                 Required items are marked with an exclamation.</em></blockquote>
                 <table class="table table-striped table-bordered" id="data_modalCreateRecordTable">
@@ -139,15 +139,32 @@
 </div>
 
 
-<div class="modal fade" id="data_modalView" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="data_modalDetail" tabindex="-1">
+    <div class="modal-dialog" style="width:90%;">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title">View a Linked Record</h4>
+                <h4 class="modal-title">View a Record in Detail</h4>
             </div>
             <div class="modal-body">
-                <table class="table table-bordered table-striped" id="data_modalViewTable">
+                <blockquote><em>Be aware that changes may take some time to propagate throughout the database (typically less than 1 minute).<br>
+                <br>
+                You'll also need to refresh the table to see these changes.</em></blockquote>
+                <table class="table table-bordered table-striped" id="data_modalDetailTable">
                 </table>
+
+                <!--The following divs are to contain buttons for model-specific actions-->
+                <div class="well well-sm data_modalDetailWell" model="client" hidden>
+                    Client-only actions
+                </div>
+
+                <div class="well well-sm data_modalDetailWell" model="provider" hidden>
+                    Provider-only actions
+                </div>
+
+                <div class="well well-sm data_modalDetailWell" model="ticket" hidden>
+                    Ticket-only actions
+                </div>
+
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
@@ -164,6 +181,7 @@
 </style>
 
 <script type="text/javascript">
+    //Initialize some of the data tab variables
     var data_config = {};
     var data_currentModel = '';
     var data_pageMaxResults = 16;
@@ -243,8 +261,17 @@
         //Iterate and insert head cells.
         for (i in properties) {
             var property = properties[i];
+
+            //If property is not meant to be viewed in the table, skip over it
+            if (!property['in_table']) {continue;}
+
             var markup = String.format('<th><small>{0}</small></th>', property.name.toUpperCase());
             tableHead.append(markup);
+        }
+
+        //Put some empty head cells in for the control buttons
+        for (var i = 0; i <= 0; i++) {
+            tableHead.append('<th></th>')
         }
 
         //Split the returned data up
@@ -267,15 +294,21 @@
             //Let's iterate over the properties again so we can get their values!
             for (j in properties) {
                 var property = properties[j];
+                if (!property['in_table']) {continue;}
+
                 var cell = $('<td></td>').appendTo(row);
 
-                //Hand it off to another function for the sake of modularity.
-                data_makeEditable(cell, record, property);
+                //Create a table view element for the property
+                data_makeTableView(cell, record, property);
             }
-        }
 
-        //<li><a href="#">&laquo;</a></li>
-        //<li><a href="#">&raquo;</a></li>
+            //Create an edit button for the row!
+            var cell = $('<td></td>').appendTo(row);
+            var button = $('<button class="btn btn-success btn-xs btn-block">VIEW / EDIT</button>').appendTo(cell);
+            button.data('model', model);
+            button.data('id', record['id']);
+            button.click(data_detailRecordButton);
+        }
 
         //Build the pagination buttons
         var container = $('#data_pagination');
@@ -316,7 +349,55 @@
         $('#data_filterSelect, #data_filterInput, #data_buttonFilter').prop('disabled', false);
     }
 
-    function data_makeEditable(cell, record, property, empty) {
+    function data_makeTableView(cell, record, property) {
+        //Fetch the value. It'll save time later.
+        var data = record[property['name']];
+
+        //Filter out empty data
+        if (data == null) {
+            cell.append('<em>Empty</em>');
+            return;
+        }
+
+        //Convert booleans
+        if (typeof(data) == 'boolean') {
+            data = JSON.stringify(data);
+        }
+
+        //Get the property type and start a switch
+        var type = property['type'];
+        switch (type) {
+
+            case 'model':
+                //Create a button, give it the necessary data attributes, and then link it to the view function
+                button = $('<button class="btn btn-success btn-xs btn-block"></button>').appendTo(cell);
+                button.data('model', property['model']);
+                button.data('id', data['id']);
+                button.text(property['model']);
+                button.click(data_detailRecordButton);
+                break;  
+
+            case 'headshot':
+                //Append a button to the cell
+                var markup = '<button class="btn btn-sm btn-success"><span class="glyphicon glyphicon-picture"></span></button>';
+                var button = $(markup).appendTo(cell);
+                var url = String.format('/api/headshot_download?token={0}&id={1}', session, data['id']);
+                button.attr('href', url);
+
+                //Bind the button to open a bootbox alert with the image.
+                button.click(function() {
+                    var markup = String.format('<div style="text-align:center;"><h2>Headshot</h2><hr><img src="{0}"></div>', $(this).attr('href'));
+                    bootbox.alert(markup);
+                });
+
+            default:
+                cell.append(data);
+                break;
+
+        }
+    }
+
+    function data_makeEditView(cell, record, property, empty) {
         var value = null;
         if (!empty) {
             value = record[property.name];
@@ -327,30 +408,11 @@
             value = JSON.stringify(value);
         }
 
+        //Load the default specified type, so it can be changed later on if needed
+        var type = property['type'];
+
         //This switch will deal with properties that can't or shouldn't be edited in the console.
         switch (property.type) {
-
-            case 'copyme':
-                /*
-                //Create a readonly text entry that allows the user to easily copy the id of the record.
-                var entry = $('<input type="text" readonly/>').appendTo(cell)
-                entry.val(value);
-                entry.css('width', '100%');
-                entry.tooltip({
-                    'placement': 'right',
-                    'title': 'Click, then Ctrl+C to copy'
-                });
-                //Make it auto-select all text when clicked on.
-                entry.click(function() { $(this).select(); });
-                return;
-                */
-                var markup = '<button class="btn btn-sm btn-success"><span class="glyphicon glyphicon-share-alt"></span></button>';
-                var button = $(markup).appendTo(cell);
-                button.attr('modelid', value);
-                button.click(function() {
-                    window.prompt('Press Ctrl+C to copy to clipboard.', $(this).attr('modelid'));
-                });
-                return
 
             case 'readonly':
                 cell.append(value);
@@ -377,7 +439,7 @@
             case 'model':
                 //If this is a form, continue as a text entry
                 if (empty) {
-                    property['type'] = 'text';
+                    type = 'text';
                     break;
                 }
 
@@ -391,15 +453,15 @@
                 var text = 'View'
                 if (property.model == 'client') {text = value['name_first'] + ' ' + value['name_last'];}
 
-                //Put it all together into a purple button sandwich.
+                //Put it all together into a green button sandwich.
                 var entry = $(String.format('<button class="btn btn-sm btn-success" model="{0}" modelid="{1}">{2}</button>',
                         property.model,
                         value.id,
                         text
                     )).appendTo(cell);
-                    entry.css('width', '100%');
+                    //entry.css('width', '100%');
                     entry.click(function() {
-                        data_viewRecord(
+                        data_detailRecord(
                             $(this).attr('model'),
                             $(this).attr('modelid')
                         )
@@ -412,7 +474,7 @@
         var editor = $('<a href="#"></a>').appendTo(cell);
         var url = String.format('/api/{0}_consoleupdate?token={1}', data_currentModel, session)
         var options = {
-            'type': property.type,
+            'type': type,
             'name': property.name,
         };
 
@@ -465,32 +527,47 @@
         editor.editable(options);
     }
 
-    function data_viewRecord(model, modelid) {
+    function data_detailRecord(model, modelid) {
         //Hide the modal and clear its contents
-        $('#data_modalView').modal('hide');
-        $('#data_modalViewTable').children().each(function() {
+        //$('#data_modalDetail').modal('hide');
+        $('#data_modalDetailTable').children().each(function() {
             $(this).remove();
         });
-        $('#data_modalView').modal('show');
+        
         $.ajax({
             'url': String.format('/api/{0}_get?token={1}&id={2}', model, session, modelid),
             'dataType': 'json',
-            'error': function() {
-                $('#data_modalView').modal('hide');
-                bootbox.alert('An error occurred trying to load the record.');
-            },
+            'error': data_errorHandler,
             'success': function(data, status, xhr) {
-                var table = $('#data_modalViewTable');
+                var table = $('#data_modalDetailTable');
 
                 for (i in data_config['properties'][model]) {
                     var property = data_config['properties'][model][i];
-                    table.append(String.format('<tr><td><strong>{0}</strong></td><td>{1}</td></tr>',
-                        property['name'].toUpperCase(),
-                        data[property['name']]
-                    ));
+
+                    if (!property['in_edit']) {continue;}
+
+                    var row = $('<tr></tr>').appendTo(table);
+                    row.append(String.format('<td><strong>{0}</strong></td>', property['name'].toUpperCase()));
+
+                    var cell = $('<td style="text-align: left;"></td>').appendTo(row);
+                    data_makeEditView(cell, data, property);
                 }
+
+                //Hide all detail wells
+                $('.data_modalDetailWell').hide();
+
+                //And show the one for the specific model we're working with
+                $('.data_modalDetailWell[model="' + model + '"]').show()
+
+                $('#data_modalDetail').modal('show');
             }
         });
+    }
+
+    function data_detailRecordButton() {
+        var model = $(this).data('model')
+        var modelid = $(this).data('id');
+        data_detailRecord(model, modelid);
     }
 
     function data_createRecord(model) {
@@ -509,7 +586,7 @@
             var property = properties[i];
 
             //If property is not meant to be filled out (such as record ID), then continue without it.
-            if (property['required'] == null) {continue;}
+            if (!property['in_create']) {continue;}
 
             //Create an empty row for placing elements in
             var row = $('<tr></tr>').appendTo(table);
@@ -519,7 +596,7 @@
 
             //Make the cell, pass it to the constructor, and profit.
             var cell = $('<td></td>').appendTo(row);
-            data_makeEditable(cell, null, property, true);
+            data_makeEditView(cell, null, property, true);
 
             //Create a cell for the indicator.
             var cell = $('<td></td>').appendTo(row);
@@ -530,8 +607,8 @@
             }
         }
 
-        //Show off the finished product!
-        $('#data_modalCreateRecord').modal('show');
+        //Unbind the previous click bindings. Thank god I was able to debug this
+        $('#data_buttonCreateRecordSubmit').off('click');
         
         //Give the submit button something to do.
         $('#data_buttonCreateRecordSubmit').click(function() {
@@ -564,6 +641,9 @@
                 }
             });
         });
+        
+        //Show off the finished product!
+        $('#data_modalCreateRecord').modal('show');
     }
 
     function data_deleteRecords(model, modelids) {

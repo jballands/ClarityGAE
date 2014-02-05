@@ -54,7 +54,6 @@ class Client(db.Model):
     headshot = db.ReferenceProperty(Headshot, required=False)
 
 class Ticket(db.Model):
-    isopen = db.BooleanProperty(required=False, default=True)
     opened = db.DateTimeProperty(auto_now_add=True)
     closed = db.DateTimeProperty(required=False)
 
@@ -64,8 +63,10 @@ class Ticket(db.Model):
 
 class Service(db.Model):
     name = db.StringProperty(required=True)
-    quantity = db.IntegerProperty(required=True)
+    #quantity = db.StringProperty(required=False)
+    description = db.TextProperty(required=False)
     provider = db.ReferenceProperty(Provider, required=True, collection_name='services')
+    ticket = db.ReferenceProperty(Ticket, required=True, collection_name='services')
 
 class Loan(db.Model):
     disbursed = db.FloatProperty(required=True)
@@ -75,18 +76,3 @@ class Loan(db.Model):
     closed = db.DateTimeProperty(required=False)
 
     client = db.ReferenceProperty(Client, required=True, collection_name='loans')
-
-#Relationship Models:
-'''
-class TicketProvider(db.Model):
-    ticket = db.ReferenceProperty(Ticket, required=True, collection_name='tickets')
-    provider = db.ReferenceProperty(Provider, required=True, collection_name='providers')
-'''
-
-class TicketService(db.Model):
-    ticket = db.ReferenceProperty(Ticket, required=True, collection_name='tickets')
-    service = db.ReferenceProperty(Service, required=True, collection_name='services'),
-
-class ClientProvider(db.Model):
-    client = db.ReferenceProperty(Client, required=True, collection_name='clients')
-    provider = db.ReferenceProperty(Provider, required=True, collection_name='providers')

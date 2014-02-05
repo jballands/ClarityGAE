@@ -542,6 +542,40 @@ class APIClientHandler(_APIModelHandler):
 class APITicketHandler(_APIModelHandler):
     _model = models.Ticket
 
+class APIServiceHandler(_APIModelHandler):
+    _model = models.Service
+
+class DummyHandler(webapp2.RequestHandler):
+    def get(self):
+        prov = models.Provider(
+            name_first = 'Testing',
+            name_last = 'Providers',
+            username = 'testing',
+            password = 'testing',
+            admin = True
+        )
+        prov.put()
+
+        cli = models.Client(
+            name_first = 'Testing',
+            name_last = 'Clients',
+            dateofbirth = datetime.date(year=2014, month=1, day=1),
+            sex = 'null'
+        )
+        cli.put()
+
+        tick = models.Ticket(
+            client=cli
+        )
+        tick.put()
+
+        serv = models.Service(
+            name = 'left_arm',
+            provider = prov,
+            ticket = tick
+        )
+        serv.put()
+
 #Delegating the various handlers to their respective paths
 app = webapp2.WSGIApplication([
     ('/', IndexHandler),
@@ -554,4 +588,6 @@ app = webapp2.WSGIApplication([
     ('/api/headshot_(\w+)', APIHeadshotHandler),
     ('/api/client_(\w+)', APIClientHandler),
     ('/api/ticket_(\w+)', APITicketHandler),
+    ('/api/service_(\w+)', APIServiceHandler),
+    ('/test', DummyHandler)
 ], debug=True)

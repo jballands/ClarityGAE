@@ -3,6 +3,8 @@
         <title>Clarity Database Gateway</title>
         {% include '_header.html' %}
         {% include '_footer.html' %}
+
+        <script src="/static/js/TweenMax.min.js"></script>
     </head>
     <body>
         <style>
@@ -10,66 +12,158 @@
                 background-image: url('/static/image/cubes_@2X.png');
             }
         </style>
-        <center>
-            <!--<h1 class="padding80 bg-color-blue fg-color-white">Clarity<small><small>db</small></small></h1>-->
-            <div style="
+
+        <div class="text-center" id="titlebar">
+            <img src="/static/image/ClarityLogo_padded_white.svg" style="height: 100%;">
+            <button class="btn btn-danger navbar-right" id="logoutButton">Logout</button>
+        </div>
+
+        <iframe id="consoleframe" style="width:100%;height:100%;" hidden>
+        </iframe>
+
+        <style>
+            #titlebar {
                 width: 100%;
                 height: 38%;
-                background-color: #0091F6;
-                border-bottom: 1px solid #EDEDED;
+                background-color: #0091f6;
+                border: none;
+                margin-bottom: 0;
+
                 position: relative;
-            ">
-                    <img src="/static/image/ClarityLogo_white.svg" style="
-                        height: 62%;
-                        margin: auto;
-                        position: absolute;
-                        top: 0; left: 0; bottom: 0; right: 0;
-                    ">
-            </div>
+            }
 
-            <style>
-                .spacing {
-                    padding-right: 1em;
-                }
-            </style>
+            #logoutButton {
+                height: 100%;
+                position: absolute;
+                right:0px;
+                opacity: 0.0;
+            }
 
+            iframe {
+                border: none;
+            }
+        </style>
+
+        <div id="logindiv">
             <br>
-            <div class="container">
+            <form id="loginform" class="form-horizontal">
 
-                <a class="btn btn-lg btn-primary btn-block" href="/login">
-                    Continue to web console
-                </a>
-
-                <a class="btn btn-sm btn-primary btn-block" href="http://jonathanballands.me/portfolio/clarity.html">
-                    Visit the project's homepage
-                </a>
-
-            <!--
-            <p>
-                <button class="btn btn-sm widen" href="https://github.com/jballands/ClarityAndroid">
-                    View the project on GitHub<span class="glyphicon glyphicon-link pull-right"></span>
-                </button>
-            </p>
-            -->
-
-                <div class="btn-group btn-block">
-                    <button type="button" class="btn btn-primary btn-sm btn-block dropdown-toggle" data-toggle="dropdown">
-                    View the project on GitHub
-                    </button>
-                    <ul class="dropdown-menu btn-block" role="menu">
-                        <li><a href="https://github.com/jballands/ClarityAndroid">Android App</a></li>
-                        <li><a href="https://github.com/jballands/ClarityGAE">Database + Console</a></li>
-                    </ul>
+                <div class="row">
+                    <div class="col-md-10 col-md-offset-1">
+                        <h2 class="form-signin-heading">Log in to the console</h2>
+                    </div>
                 </div>
-            </div>
-        </center>
 
-        
-        
+                <div class="row">
+                    <div class="col-md-10 col-md-offset-1">
+                        <div class="form-group">
+                            <input type="text" class="form-control" placeholder="Username" name="username" autofocus required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-10 col-md-offset-1">
+                        <div class="form-group">
+                            <input type="password" class="form-control" placeholder="Password" name="password" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-10 col-md-offset-1">
+                        <div class="form-group">
+                            <button class="btn btn-lg btn-primary btn-block" type="submit">Submit</button>
+                        </div>
+                    </div>
+                </div>
+                <input type="text" name="console" value="true" hidden>
+            </form>
+        </div>
+
         <script type="text/javascript">
-            //$('button').click(function() {
-            //    window.location = $(this).attr('href');
-            //});
+            var session = '';
+
+            var titlebarContracted = '50px';
+            var titlebarExpanded = '38%'
+
+            function loginSuccess(data, status, xhr) {
+                session = data['token'];
+                $.cookies.set('clarity-console-session', session);
+                //window.location = '/console';
+
+                $('#logindiv').hide();
+                //$('#consoleframe').show();
+                $('#titlebar').animate({'height': titlebarContracted}, complete=function() {
+                    //$('#logoutButton').show()
+                    $('#logoutButton').animate({'opacity': 1.0});
+                    $('#consoleframe').show().attr('src', '/console')
+                })
+            }
+
+            function loginError(xhr, status, error) {
+                if(status == 'timeout'){
+                    bootbox.alert('Oops! Your login request timed out; try again.');
+                    return
+                }
+                bootbox.alert('The password and/or username provided are invalid.');
+                $('#loginform').children().attr('disabled', false);
+            }
+
+            function loginComplete() {
+                //$('#loginform').children().attr('disabled', false);
+            }
+
+            //$('#titlebar').css('height', '1.5em')
+
+            $('#loginform').submit(function() {
+                var data = $(this).serialize();
+                $(this).children().attr('disabled', true);
+                $.ajax({
+                    'url': '/api/session_begin',
+                    'method': 'post',
+                    'dataType': 'json',
+                    'data': data,
+                    'success': loginSuccess,
+                    'error': loginError,
+                    'complete': loginComplete
+                });
+                return false;
+            });
+
+
+            function logoutComplete() {
+                //$('#logoutButton').hide();
+                $('#logoutButton').animate({'opacity': 0.0}, complete=function() {
+                    $('#titlebar').animate({'height': '38%'}, complete=function() {
+                        $('input[name="password"]').val('')
+                        $('#logindiv').show()
+                    });
+                });
+            }
+
+            $('#logoutButton').click(function() {
+                $('#consoleframe').attr('src', '').hide();
+
+                var data = {
+                    'token': session
+                }
+
+                $.ajax({
+                    'url': '/api/session_end',
+                    'method': 'POST',
+                    'data': data,
+                    'complete': logoutComplete
+                });
+            });
+
+            $(document).ready(function() {
+                //do nothing :v
+            });
         </script>
+
+        <div style="position:absolute;bottom:0px;" id="footer">
+            Styled using <a href="http://getbootstrap.com/">Bootstrap 3.1.0</a>, <a href="http://bootswatch.com/cosmo/">Cosmo</a>, and <a href="http://subtlepatterns.com/">Subtle Patterns</a>.
+        </div>
     </body>
 </html>

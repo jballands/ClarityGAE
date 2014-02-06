@@ -487,7 +487,7 @@ class APISessionHandler(_APIHandler):
         }, self.response, skipkeys=True, cls=APIJSONEncoder)
 
     def api_end(self):
-        token = self.request.get('token', '')
+        token = self.args.pop('token', None)
         if not token:
             self.error(404)
             return

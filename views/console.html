@@ -15,6 +15,10 @@
             var user = $.parseJSON('{{ encode(session.user) }}');
         </script>
 
+        <div class="navbar text-center" id="claritylogobar">
+            <img src="/static/image/ClarityLogo_padded_white.svg" style="height: 100%;">
+        </div>
+
         <!-- NAVBAR START -->
         <ul class="nav nav-tabs" style="background-image:url('/static/image/cubes.png');">
             <li class="active"><a href="#tab-home" data-toggle="tab">Home</a></li>
@@ -27,7 +31,7 @@
                 </a>
                 <ul class="dropdown-menu">
                     <li><a href="#tab-settings" data-toggle="tab">Settings</a></li>
-                    <!--<li><a href="/login?close=true">Logout</a></li>-->
+                    <li><a href="/login?close=true">Logout</a></li>
                 </ul>
             </li>
         </ul>

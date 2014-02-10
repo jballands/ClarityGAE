@@ -3,8 +3,6 @@
         <title>Clarity Database Gateway</title>
         {% include '_header.html' %}
         {% include '_footer.html' %}
-
-        <script src="/static/js/TweenMax.min.js"></script>
     </head>
     <body>
         <style>
@@ -13,44 +11,9 @@
             }
         </style>
 
-        <div class="row">
-            <div class="col-md-12">
-                <div class="text-center" id="titlebar">
-                    <img src="/static/image/ClarityLogo_padded_white.svg" style="height: 100%;">
-                    <button class="btn btn-danger navbar-right" id="logoutButton">Logout</button>
-                </div>
-            </div>
+        <div class="navbar text-center" id="claritylogobar">
+            <img src="/static/image/ClarityLogo_padded_white.svg" style="height: 100%;">
         </div>
-
-        <div class="row">
-            <div class="col-md-12">
-                <iframe id="consoleframe" style="width:100%;height:100%;" hidden>
-                </iframe>
-            </div>
-        </div>
-
-        <style>
-            #titlebar {
-                width: 100%;
-                height: 38%;
-                background-color: #0091f6;
-                border: none;
-                margin-bottom: 0;
-
-                position: relative;
-            }
-
-            #logoutButton {
-                height: 100%;
-                position: absolute;
-                right:0px;
-                opacity: 0.0;
-            }
-
-            iframe {
-                border: none;
-            }
-        </style>
 
         <div id="logindiv">
             <br>
@@ -100,12 +63,11 @@
                 $.cookies.set('clarity-console-session', session);
                 //window.location = '/console';
 
+                $('#footer').hide();
                 $('#logindiv').hide();
                 //$('#consoleframe').show();
-                $('#titlebar').animate({'height': titlebarContracted}, complete=function() {
-                    //$('#logoutButton').show()
-                    $('#logoutButton').animate({'opacity': 1.0});
-                    $('#consoleframe').show().attr('src', '/console')
+                $('#claritylogobar').animate({'height': titlebarContracted}, complete=function() {
+                    window.location = '/console'
                 })
             }
 
@@ -122,7 +84,7 @@
                 //$('#loginform').children().attr('disabled', false);
             }
 
-            //$('#titlebar').css('height', '1.5em')
+            //$('#claritylogobar').css('height', '1.5em')
 
             $('#loginform').submit(function() {
                 var data = $(this).serialize();
@@ -139,34 +101,8 @@
                 return false;
             });
 
-
-            function logoutComplete() {
-                //$('#logoutButton').hide();
-                $('#logoutButton').animate({'opacity': 0.0}, complete=function() {
-                    $('#titlebar').animate({'height': '38%'}, complete=function() {
-                        $('input[name="password"]').val('')
-                        $('#logindiv').show()
-                    });
-                });
-            }
-
-            $('#logoutButton').click(function() {
-                $('#consoleframe').attr('src', '').hide();
-
-                var data = {
-                    'token': session
-                }
-
-                $.ajax({
-                    'url': '/api/session_end',
-                    'method': 'POST',
-                    'data': data,
-                    'complete': logoutComplete
-                });
-            });
-
             $(document).ready(function() {
-                //do nothing :v
+                $('#claritylogobar').css('height', titlebarExpanded)
             });
         </script>
 

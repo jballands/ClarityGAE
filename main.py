@@ -194,12 +194,14 @@ class _APIHandler(webapp2.RequestHandler):
     _errors = {
         #401 errors
         401: 'Unauthorized',
-        401.1: 'Malformed data',
+        401.2: 'Malformed data',
 
         #403 errors
         403: 'Forbidden',
-        403.1: 'Invalid session; try logging in again',
-        403.2: 'Only admins have access to this function',
+        403.1: 'Incorrect username',
+        403.2: 'Incorrect password',
+        403.3: 'Invalid session; try logging in again',
+        403.4: 'Only admins have access to this function',
 
         #404 errors
         404: 'Not found',
@@ -211,31 +213,33 @@ class _APIHandler(webapp2.RequestHandler):
     _restricted = ['remove',]
 
     def route(self, action):
-        if self._secure:
-            token = self.request.get('token', None)
-            session = self.session_from_token(token)
-
-            if not session:
-                return self.error(403.1)
-
-            if action in self._restricted and not session.user.admin:
-                return self.error(403.2)
-
-        arguments = self.request.arguments()
-
+        raw_arguments = self.request.arguments()
         self.args = {}
         
         try:
-            for argument in arguments:
+            for argument in raw_arguments:
                 self.args[argument] = self.argDecode(argument, self.request.get(argument))
-            if 'pk' in arguments:
+            if 'pk' in raw_arguments:
                 self.args['value'] = self.argDecode(self.args['name'], self.args['value'])
         except ValueError:
             self.error(401)
             return
 
-        #Remove the token argument
-        self.args.pop('token', None)
+        #Remove the token argument and log it to the console
+        self.token = self.args.pop('token', None)
+        logging.info('REQUEST_TOKEN ' + repr(self.token))
+
+        #Log the arguments to assist with error debugging
+        logging.info('REQUEST_ARGS ' + repr(self.args))
+
+        if self._secure:
+            self.session = self.session_from_token(self.token)
+
+            if not self.session:
+                return self.error(403.3)
+
+            if action in self._restricted and not self.session.user.admin:
+                return self.error(403.4)
 
         function = 'api_' + action
         if hasattr(self, function):
@@ -249,8 +253,11 @@ class _APIHandler(webapp2.RequestHandler):
         intcode = int(math.floor(floatcode))
         webapp2.RequestHandler.error(self, intcode)
 
+        logging.warning('ERROR_CODE ' + repr(floatcode))
+
         if floatcode in self._errors:
             json.dump(self._errors[floatcode], self.response, cls=APIJSONEncoder)
+            logging.warning('ERROR_MESSAGE ' + repr(self._errors[floatcode]))
 
     @staticmethod
     def argDecode(key, value):
@@ -462,12 +469,12 @@ class APISessionHandler(_APIHandler):
 
         user = models.Provider.all().filter('username =', username).get()
         if not user:
-            self.error(403)
+            self.error(403.1)
             return
 
         password_hash = hashlib.md5(password).hexdigest()
         if not password_hash == user.password:
-            self.error(403)
+            self.error(403.2)
             return
 
         session = models.Session(
@@ -487,15 +494,11 @@ class APISessionHandler(_APIHandler):
         }, self.response, skipkeys=True, cls=APIJSONEncoder)
 
     def api_end(self):
-        token = self.args.pop('token', None)
+        token = self.token
         if not token:
-            self.error(404)
             return
-
-        #session = session_get(token)
         session = _APIHandler.session_from_token(token)
         if not session:
-            self.error(403)
             return
 
         session.closed = True
@@ -542,8 +545,8 @@ class APIClientHandler(_APIModelHandler):
 class APITicketHandler(_APIModelHandler):
     _model = models.Ticket
 
-class APIServiceHandler(_APIModelHandler):
-    _model = models.Service
+#class APIServiceHandler(_APIModelHandler):
+#    _model = models.Service
 
 class DummyHandler(webapp2.RequestHandler):
     def get(self):
@@ -588,6 +591,6 @@ app = webapp2.WSGIApplication([
     ('/api/headshot_(\w+)', APIHeadshotHandler),
     ('/api/client_(\w+)', APIClientHandler),
     ('/api/ticket_(\w+)', APITicketHandler),
-    ('/api/service_(\w+)', APIServiceHandler),
-    ('/test', DummyHandler)
+    #('/api/service_(\w+)', APIServiceHandler),
+    ('/test', DummyHandler),
 ], debug=True)

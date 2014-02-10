@@ -54,16 +54,25 @@ class Client(db.Model):
     headshot = db.ReferenceProperty(Headshot, required=False)
 
 class Ticket(db.Model):
+    #Basic ticket information and reference properties
+    qrcode = db.StringProperty(required=False)
+    client = db.ReferenceProperty(Client, required=True, collection_name='tickets')
+
+    #Timestamp properties
     opened = db.DateTimeProperty(auto_now_add=True)
     closed = db.DateTimeProperty(required=False)
 
-    qrcode = db.StringProperty(required=False)
+    #Service properties
+    left_left = db.BooleanProperty(required=False, default=False)
+    right_left = db.BooleanProperty(required=False, default=False)
+    left_arm = db.BooleanProperty(required=False, default=False)
+    right_arm = db.BooleanProperty(required=False, default=False)
+    left_shin = db.BooleanProperty(required=False, default=False)
+    right_shin = db.BooleanProperty(required=False, default=False)
 
-    client = db.ReferenceProperty(Client, required=True, collection_name='tickets')
-
+'''
 class Service(db.Model):
     name = db.StringProperty(required=True)
-    #quantity = db.StringProperty(required=False)
     description = db.TextProperty(required=False)
     provider = db.ReferenceProperty(Provider, required=True, collection_name='services')
     ticket = db.ReferenceProperty(Ticket, required=True, collection_name='services')
@@ -76,3 +85,4 @@ class Loan(db.Model):
     closed = db.DateTimeProperty(required=False)
 
     client = db.ReferenceProperty(Client, required=True, collection_name='loans')
+'''

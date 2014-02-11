@@ -7,49 +7,57 @@
     <body>
         <style>
             body {
-                background-image: url('/static/image/cubes_@2X.png');
+                background-image: url('/static/image/cubes.png');
             }
         </style>
 
         <div class="navbar text-center" id="claritylogobar">
-            <img src="/static/image/ClarityLogo_padded_white.svg" style="height: 100%;">
+            <img src="/static/image/ClarityLogo_padded_white.svg" id="claritylogo">
         </div>
 
-        <div id="logindiv">
+        <div class="container-fluid" id="logindiv">
+
             <br>
-            <form id="loginform" class="form-horizontal">
+            <form id="loginform">
 
                 <div class="row">
                     <div class="col-md-10 col-md-offset-1">
-                        <h2 class="form-signin-heading">Log in to the console</h2>
+                        <h2>Log in to the console</h2>
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="col-md-10 col-md-offset-1">
-                        <div class="form-group">
-                            <input type="text" class="form-control" placeholder="Username" name="username" autofocus required>
-                        </div>
+                        <input type="text" class="form-control" placeholder="Username" name="username" autofocus required>
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="col-md-10 col-md-offset-1">
-                        <div class="form-group">
-                            <input type="password" class="form-control" placeholder="Password" name="password" required>
-                        </div>
+                        <input type="password" class="form-control" placeholder="Password" name="password" required>
                     </div>
                 </div>
 
+                <br>
+
                 <div class="row">
                     <div class="col-md-10 col-md-offset-1">
-                        <div class="form-group">
-                            <button class="btn btn-lg btn-primary btn-block" type="submit">Submit</button>
-                        </div>
+                        <button class="btn btn-lg btn-primary btn-block" type="submit">Submit</button>
                     </div>
                 </div>
                 <input type="text" name="console" value="true" hidden>
             </form>
+
+            <br><br><br>
+
+            <div class="row">
+                <div class="col-md-6 col-md-offset-3 text-center">
+                    <em>
+                        Styled using <a href="http://getbootstrap.com/">Bootstrap 3.1.0</a>, <a href="http://bootswatch.com/cosmo/">Cosmo</a>, and <a href="http://subtlepatterns.com/">Subtle Patterns</a>.
+                    </em>
+                </div>
+            </div>
+
         </div>
 
         <script type="text/javascript">
@@ -66,6 +74,7 @@
                 $('#footer').hide();
                 $('#logindiv').hide();
                 //$('#consoleframe').show();
+
                 $('#claritylogobar').animate({'height': titlebarContracted}, complete=function() {
                     window.location = '/console'
                 })
@@ -106,8 +115,11 @@
             });
         </script>
 
+        <!--
         <div style="position:absolute;bottom:0px;" id="footer">
             Styled using <a href="http://getbootstrap.com/">Bootstrap 3.1.0</a>, <a href="http://bootswatch.com/cosmo/">Cosmo</a>, and <a href="http://subtlepatterns.com/">Subtle Patterns</a>.
         </div>
+        -->
+
     </body>
 </html>

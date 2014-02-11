@@ -10,13 +10,14 @@
         <script src="/static/js/moment.min.js"></script>
     </head>
     <body>
+
         <script>
             var session = '{{ session.key() }}';
             var user = $.parseJSON('{{ encode(session.user) }}');
         </script>
 
         <div class="navbar text-center" id="claritylogobar">
-            <img src="/static/image/ClarityLogo_padded_white.svg" style="height: 100%;">
+            <img src="/static/image/ClarityLogo_padded_white.svg" id="claritylogo">
         </div>
 
         <!-- NAVBAR START -->

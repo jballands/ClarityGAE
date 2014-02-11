@@ -3,3 +3,8 @@
     margin-bottom: 0;
     height: 50px;
 }
+
+#claritylogo {
+    height: 100%;
+    max-width: 100%;
+}

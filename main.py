@@ -82,11 +82,24 @@ class ConsoleHandler(webapp2.RequestHandler):
             self.error(403)
             self.response.write(JINJA('console-403.html').render())
             return
+
+        sampledata = {}
+
+        #Generate some generic statistics for demonstration of the home screen
+        totalcount = float(models.Client.all().count())
+
+        malecount = float(models.Client.all().filter('sex =', 'male').count())
+        femalecount = float(models.Client.all().filter('sex =', 'female').count())
+
+        sampledata['male'] = math.floor(malecount / totalcount * 100.0)
+        sampledata['female'] = math.floor(femalecount / totalcount * 100.0)
+
         values = {
             'session': session,
             'resolve': _APIModelHandler.resolve_properties,
             'encode': APIJSONEncoder().encode,
             'models': models,
+            'sampledata': sampledata,
         }
         self.response.write(JINJA('console.html').render(values))
 
@@ -550,34 +563,7 @@ class APITicketHandler(_APIModelHandler):
 
 class DummyHandler(webapp2.RequestHandler):
     def get(self):
-        prov = models.Provider(
-            name_first = 'Testing',
-            name_last = 'Providers',
-            username = 'testing',
-            password = 'testing',
-            admin = True
-        )
-        prov.put()
-
-        cli = models.Client(
-            name_first = 'Testing',
-            name_last = 'Clients',
-            dateofbirth = datetime.date(year=2014, month=1, day=1),
-            sex = 'null'
-        )
-        cli.put()
-
-        tick = models.Ticket(
-            client=cli
-        )
-        tick.put()
-
-        serv = models.Service(
-            name = 'left_arm',
-            provider = prov,
-            ticket = tick
-        )
-        serv.put()
+        return self.error(404)
 
 #Delegating the various handlers to their respective paths
 app = webapp2.WSGIApplication([

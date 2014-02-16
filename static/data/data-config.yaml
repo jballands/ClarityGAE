@@ -1,7 +1,7 @@
 models:
     -   client
     -   provider
-    -   ticket
+#    -   ticket
 
 names:
     client: Clients

@@ -1,4 +1,16 @@
 <div class="tab-pane fade in active" id="tab-home">
+
+    <br><br>
+    <h1><p><img class="sample" src="/static/image/male_icon.svg"> {{ sampledata['male'] }}%</p></h1>
+    <br>
+    <h1><p><img class="sample" src="/static/image/female_icon.svg"> {{ sampledata['female'] }}%</p></h1>
+
+    <style>
+        img.sample {
+            height: 1.5em;
+        }
+    </style>
+
     <script>
         var tooltip = $('#tab-data-button').tooltip({
             'title': 'Use the tabs to navigate',

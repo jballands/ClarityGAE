@@ -63,12 +63,20 @@ class Ticket(db.Model):
     closed = db.DateTimeProperty(required=False)
 
     #Service properties
-    left_left = db.BooleanProperty(required=False, default=False)
-    right_left = db.BooleanProperty(required=False, default=False)
-    left_arm = db.BooleanProperty(required=False, default=False)
-    right_arm = db.BooleanProperty(required=False, default=False)
+    left_leg = db.BooleanProperty(required=False, default=False)
+    right_leg = db.BooleanProperty(required=False, default=False)
     left_shin = db.BooleanProperty(required=False, default=False)
     right_shin = db.BooleanProperty(required=False, default=False)
+    left_arm = db.BooleanProperty(required=False, default=False)
+    right_arm = db.BooleanProperty(required=False, default=False)
+
+    sewing_machine = db.BooleanProperty(required=False, default=False)
+    crutches = db.BooleanProperty(required=False, default=False)
+    tricycle = db.BooleanProperty(required=False, default=False)
+    tea_stand = db.BooleanProperty(required=False, default=False)
+    wheelchair = db.BooleanProperty(required=False, default=False)
+    
+    loan = db.IntegerProperty(required=False, default=0)
 
 '''
 class Service(db.Model):

@@ -166,22 +166,20 @@ class APIJSONEncoder(json.JSONEncoder):
         elif isinstance(obj, db.Model):
             properties = obj.properties()
 
+            #Resolve the object to a dictionary
+            #(only works for explicitly defined properties)
             kvs = db.to_dict(obj)
+
+            #Get implicitly defined references (this is such a bitch)
+            for attr in dir(obj):
+                if isinstance(getattr(obj, attr), db.Query):
+                    kvs[attr] = list(getattr(obj, attr).run(keys_only=True))
             
             kvs.pop('password', None)
             kvs.pop('binary', None)
 
-            #if 'binary' in kvs and kvs['binary'] is not None:
-            #    kvs['binary'] = base64.b64encode(kvs['binary'])
-
             for key in kvs:
-
-                if isinstance(properties[key], db.ReferenceProperty):
-                    if kvs[key] is None: continue
-                    reference = properties[key].reference_class.get(kvs[key])
-                    kvs[key] = reference
-
-                elif key == 'dateofbirth':
+                if key == 'dateofbirth':
                     kvs[key] = kvs[key].date()
 
             kvs['id'] = obj.key()

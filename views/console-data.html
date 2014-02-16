@@ -5,103 +5,6 @@
     <div class="container-fluid">
 
     <!-- Button row for selecting model -->
-    
-    <!--<div class="row">
-
-        <div class="col-md-5 col-md-offset-1">
-            <div class="panel panel-default" id="data_buttonPanel">
-                <div class="panel-heading"><span class="glyphicon glyphicon-tasks"></span> Data types <span class="pull-right"><em>Click to change or reload</em></span></div>
-                <div class="panel-body" id="data_buttonRow" style="text-align: center;">
-                    <button class="btn btn-primary" disabled>Loading...</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-5">
-            <div class="panel panel-primary">
-                <div class="panel-heading">
-                    <span class="glyphicon glyphicon-wrench"></span> Data Controls
-                </div>
-                <div class="panel-collapse collapse in">
-                <div class="panel-body" style="text-align: center;">
-
-                    <button class="btn btn-primary load-disable" id="data_buttonDeleteRecord">
-                        <span class="glyphicon glyphicon-fire"></span>
-                        Delete Selected
-                    </button>
-
-                    <button class="btn btn-primary load-disable" id="data_buttonCreateRecord">
-                        <span class="glyphicon glyphicon-plus"></span>
-                        Create New
-                    </button>
-
-                    <button class="btn btn-primary load-disable" id="data_buttonRefresh">
-                        <span class="glyphicon glyphicon-refresh"></span>
-                        Refresh
-                    </button>
-
-                </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <div class="row">
-        <div class="col-md-10 col-md-offset-1">
-            <div class="panel panel-info">
-                <div class="panel-heading"><span class="glyphicon glyphicon-filter"></span> Data Filters</div>
-                <div class="panel-body">
-                    
-                    <div class="col-md-4">
-                        <select class="form-control load-disable" id="data_filterSelect">
-                            <option value="" selected disabled>Field</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <input type="text" class="form-control load-disable" id="data_filterInput" placeholder="Value" />
-                    </div>
-                    <div class="col-md-4">
-                        <button class="btn btn-info btn-block load-disable" id="data_buttonFilter" disabled>Add Filter</button>
-                    </div>
-
-
-                </div>
-                <div class="panel-footer" id="data_filterList">
-                    <div class="row">
-                        <div class="col-md-9 col-md-offset-1">
-
-                            <div class="alert alert-info">
-                                This is an example <strong>filter</strong>. This is what a real <em>filter</em> will look like once they are implemented. But for now, they are just a <code>WIP</code>.
-                            </div>
-
-                        </div>
-                        <div class="col-md-1">
-                            <button class="btn btn-default" data-dismiss="alert">Remove</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="loader" id="data_loader" style="margin-left:auto;margin-right:auto;" hidden>
-    </div>
-
-    <div class="row">
-        <div class="col-md-10 col-md-offset-1">
-            <div class="table-responsive">
-                <table class="table table-striped table-condensed table-bordered" id="data_table">
-                    <thead id="data_tableHead">
-                    </thead>
-                    <tbody id="data_tableBody">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    -->
-
     <div class="row">
         <div class="col-md-3 col-md-offset-1"><hr></div>
         <div class="col-md-4 text-center" id="data_buttonRow"></div>
@@ -132,14 +35,11 @@
             <div class="panel panel-info">
                 <div class="panel-heading"><span class="glyphicon glyphicon-filter"></span> Data Filters</div>
                 <div class="panel-body">
-                    
                         <select class="form-control load-disable" id="data_filterSelect">
                             <option value="" selected disabled>Field</option>
                         </select>
                         <input type="text" class="form-control load-disable" id="data_filterInput" placeholder="Value" />
                         <button class="btn btn-info btn-block load-disable" id="data_buttonFilter" disabled>Add Filter</button>
-
-
                 </div>
                 <div class="panel-footer" id="data_filterList">
                     <!--
@@ -257,6 +157,7 @@
     var data_pageMaxResults = 16;
     var data_pageOffset = 0;
     var data_pageTotal = 0;
+    var data_filters = {};
 
     function data_errorHandler(xhr, status, error) {
         var template = '<h4>An error occurred while trying to process your request.</h4><br><div class="alert alert-warning"><small><em>{0}</em><br>{1}</small></div>';
@@ -412,6 +313,18 @@
             //Insert forward button and link it to its function
             var link_forward = $('<li><a href="#">&raquo;</a></li>').appendTo(container);
             link_forward.click(data_pageForward);
+        }
+
+        //Remove all the filter fields from the selection dropdown
+        $('#data_filterSelect>option:enabled').remove();
+
+        //Insert filter options for the current model
+        var selector = $('#data_filterSelect');
+        for (i in properties) {
+            var property = properties[i];
+            var option = $('<option></option>').appendTo(selector);
+            option.val(property['name']);
+            option.text(property['name']);
         }
 
         //Enable the Create and Delete buttons as well as all the filter controls
@@ -769,6 +682,48 @@
         data_pageOffset = $(this).attr('offset');
         data_dataLoad();
     }
+
+    function data_filterAdd(key, value) {
+        //Insert a small well into the filter list
+        var list = $('#data_filterList');
+        var well = $('<div class="well well-sm"></div>').appendTo(list);
+
+        //Populate that well with a formatted string detailing the filter and a button to remove it
+        well.append(String.format('{0} = {1} ', key, value));
+        var button = $('<button class="btn btn-xs">Remove</button>').appendTo(well);
+        button.data('key', key)
+        button.click(data_filterRemoveButton)
+    }
+
+    function data_filterAddButton() {
+        var filter_key = $('#data_filterSelect').val();
+        var filter_value = $('#data_filterInput').val();
+        
+        if (!filter_key) {
+            bootbox.alert('You must select a field in order to add a filter');
+            return;
+        }
+
+        if (!filter_value) {
+            bootbox.alert('You must provide a value to filter for');
+            return;
+        }
+
+        data_filterAdd(filter_key, filter_value);
+
+        //Clear the value input
+        $('#data_filterInput').val('');
+
+        //Reselect the default option
+        $('#data_filterSelect>option:disabled').prop('selected', true);
+    }
+
+    function data_filterRemoveButton() {
+        alert('Not implemented')
+    }
+
+    //Bind the filter button to the filter button function
+    $('#data_buttonFilter').click(data_filterAddButton);
 
     //Bind the refresh button to the dataLoad function.
     $('#data_buttonRefresh').click(data_dataLoad);

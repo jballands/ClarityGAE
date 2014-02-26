@@ -63,21 +63,23 @@ class Ticket(db.Model):
     closed = db.DateTimeProperty(required=False)
 
     #Service properties
-    left_leg = db.BooleanProperty(required=False, default=False)
-    right_leg = db.BooleanProperty(required=False, default=False)
-    left_shin = db.BooleanProperty(required=False, default=False)
-    right_shin = db.BooleanProperty(required=False, default=False)
-    left_arm = db.BooleanProperty(required=False, default=False)
-    right_arm = db.BooleanProperty(required=False, default=False)
+    left_leg = db.IntegerProperty(required=False, default=0)
+    right_leg = db.IntegerProperty(required=False, default=0)
+    left_shin = db.IntegerProperty(required=False, default=0)
+    right_shin = db.IntegerProperty(required=False, default=0)
+    left_arm = db.IntegerProperty(required=False, default=0)
+    right_arm = db.IntegerProperty(required=False, default=0)
 
-    sewing_machine = db.BooleanProperty(required=False, default=False)
-    crutches = db.BooleanProperty(required=False, default=False)
-    tricycle = db.BooleanProperty(required=False, default=False)
-    tea_stand = db.BooleanProperty(required=False, default=False)
-    wheelchair = db.BooleanProperty(required=False, default=False)
+    sewing_machine = db.IntegerProperty(required=False, default=0)
+    crutches = db.IntegerProperty(required=False, default=0)
+    tricycle = db.IntegerProperty(required=False, default=0)
+    tea_stand = db.IntegerProperty(required=False, default=0)
+    wheelchair = db.IntegerProperty(required=False, default=0)
     
-    loan = db.IntegerProperty(required=False, default=0)
+    loan_status = db.IntegerProperty(required=False, default=0)
+    load_amount = db.IntegerProperty(required=False, default=0)
 
+    #Activity log (wip)
 '''
 class Service(db.Model):
     name = db.StringProperty(required=True)

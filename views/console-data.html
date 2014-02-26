@@ -247,7 +247,7 @@
 
         //Split the returned data up
         var count = data['count'];
-        var data = data['result'];
+        var data = data['results'];
 
         //Let's start loading the data into the table! ;D
         for (i in data) {
@@ -364,14 +364,17 @@
                 //Append a button to the cell
                 var markup = '<button class="btn btn-sm btn-success"><span class="glyphicon glyphicon-picture"></span></button>';
                 var button = $(markup).appendTo(cell);
-                var url = String.format('/api/headshot_download?token={0}&id={1}', session, data['id']);
-                button.attr('href', url);
+                //var url = String.format('/api/headshot_download?token={0}&id={1}', session, data['id']);
+                //button.attr('href', url);
+                button.data('id', data);
+                button.click(data_headshotViewButton);
 
                 //Bind the button to open a bootbox alert with the image.
-                button.click(function() {
+                /*button.click(function() {
                     var markup = String.format('<div style="text-align:center;"><h2>Headshot</h2><hr><img src="{0}"></div>', $(this).attr('href'));
                     bootbox.alert(markup);
-                });
+                });*/
+                break;
 
             default:
                 cell.append(data);
@@ -660,6 +663,22 @@
                 $('#data_buttonDeleteRecord').prop('disabled', false);
             }
         });
+    }
+
+    function data_headshotView(headshot_id) {
+        //Create a template and format it with all the data
+        var url_template = '/api/headshot_download?token={0}&id={1}';
+        var url = String.format(url_template, session, headshot_id);
+
+        //Create the bootbox alert template
+        var alert_template = '<center><img src="{0}"></img></center>';
+
+        //Open that alert
+        bootbox.alert(String.format(alert_template, url));
+    }
+
+    function data_headshotViewButton() {
+        data_headshotView($(this).data('id'));
     }
 
     function data_pageBack() {

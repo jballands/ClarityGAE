@@ -13,6 +13,7 @@ import mimetypes
 
 import webapp2
 import jinja2
+import yaml
 
 from google.appengine.ext import db
 from google.appengine.api import users
@@ -155,6 +156,10 @@ class CronHandler(webapp2.RequestHandler):
 datetime_format = '%Y-%m-%d %H:%M:%S'
 date_format = '%Y-%m-%d'
 
+class APIJSONDecoder(json.JSONDecoder):
+    def default(self, obj):
+        return json.JSONDecoder.default(self, obj)
+
 class APIJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime.datetime):
@@ -202,10 +207,11 @@ class APIJSONEncoder(json.JSONEncoder):
 
 class _APIHandler(webapp2.RequestHandler):
 
-    _errors = {
+    """_errors = {
         #401 errors
         401: 'Unauthorized',
-        401.2: 'Malformed data',
+        401.1: 'Required arguments missing from request',
+        401.2: 'Invalid or malformed arguments in request',
 
         #403 errors
         403: 'Forbidden',
@@ -216,8 +222,13 @@ class _APIHandler(webapp2.RequestHandler):
 
         #404 errors
         404: 'Not found',
-        404.1: 'Model not found',
-    }
+        404.1: 'Model instance not found',
+        404.2: 'ID of incorrect model passed',
+    }"""
+
+    _errors = {}
+    with open('errors.yaml', 'r') as errorfile:
+        _errors = yaml.load(errorfile.read())
 
     _secure = True
     
@@ -227,14 +238,17 @@ class _APIHandler(webapp2.RequestHandler):
         raw_arguments = self.request.arguments()
         self.args = {}
         
-        try:
-            for argument in raw_arguments:
-                self.args[argument] = self.argDecode(argument, self.request.get(argument))
-            if 'pk' in raw_arguments:
-                self.args['value'] = self.argDecode(self.args['name'], self.args['value'])
-        except ValueError:
-            self.error(401)
-            return
+        if raw_arguments.get('json', None):
+            self.args = json.load(self.request.body_file, cls=APIJSONDecoder)
+        else:
+            try:
+                for argument in raw_arguments:
+                    self.args[argument] = self.argDecode(argument, self.request.get(argument))
+                if 'pk' in raw_arguments:
+                    self.args['value'] = self.argDecode(self.args['name'], self.args['value'])
+            except ValueError:
+                self.error(401)
+                return
 
         #Remove the token argument and log it to the console
         self.token = self.args.pop('token', None)
@@ -254,11 +268,12 @@ class _APIHandler(webapp2.RequestHandler):
 
         function = 'api_' + action
         if hasattr(self, function):
-            getattr(self, function)()
+            result = getattr(self, function)()
+            if result: self.respond_json(result)
         else:
             self.error(404)
     post = route
-    get = route
+    #get = route
 
     def error(self, floatcode):
         intcode = int(math.floor(floatcode))
@@ -269,6 +284,9 @@ class _APIHandler(webapp2.RequestHandler):
         if floatcode in self._errors:
             json.dump(self._errors[floatcode], self.response, cls=APIJSONEncoder)
             logging.warning('ERROR_MESSAGE ' + repr(self._errors[floatcode]))
+
+    def respond_json(self, data):
+        json.dump(data, self.response, cls=APIJSONEncoder, skipkeys=True)
 
     @staticmethod
     def argDecode(key, value):
@@ -328,10 +346,41 @@ class _APIHandler(webapp2.RequestHandler):
         return session
 
     def session(self):
-        return self.session_from_token(self.request.get('token', ''))
+        return self.session_from_token(self.args.get('token', ''))
 
 class _APIModelHandler(_APIHandler):
     _model = object
+
+    def _get_instances(self, throw_errors=True):
+        #If the singular ID argument is specified, return dat
+        if 'id' in self.args:
+            instance_key =  self.args.get('id')
+
+            #Do a try catch on retrieving the instance
+            try:
+                instance = self._model.get(instance_key)
+
+            #Catch the typical Model.get errors, but only toss them into the HTTP well if told to
+            except db.BadKeyError: return self.error(404.1) if throw_errors else None
+            except db.KindError: return self.error(401.2) if throw_errors else None
+
+            #If you've made it this far, return the fruits of your labor
+            return instance
+
+        #If a list of IDs is give, do dat
+        if 'ids' in self.args:
+            keylist_raw = self.args.get('id')
+
+            #Decode the JSON list with a try-catch for invalid JSON
+            try:
+                keylist = json.loads(keylist_raw)
+            except ValueError: return self.error(401.2) if throw_errors else None
+
+            #Return those results. THANK YOU GOOGLE FOR MAKING THIS EASY!
+            return db.get(keylist)
+
+        #Wow you really fucked up if it got this far
+        return None
 
     def api_create(self):
         properties = self._model.properties()
@@ -368,31 +417,12 @@ class _APIModelHandler(_APIHandler):
         }, self.response, cls=APIJSONEncoder)
 
     def api_get(self):
-        #args = self.request.arguments()
-        args = self.args
-        data = None
-        if 'id' in args:
-            instancekey = self.args.get('id', '')
-            try:
-                instance = self._model.get(instancekey)
-            except db.BadKeyError:
-                self.error(404)
-                return
-            except db.KindError:
-                self.error(401)
-                return
-            json.dump(instance, self.response, skipkeys=True, cls=APIJSONEncoder)
-        else:
-            field = args.keys()[0]
-            valid = self._model.properties().keys()
-            if not field in valid:
-                self.error(401)
-                return
-            instance = self._model.all().filter(field + ' =', args[field]).get()
-            if not instance:
-                self.error(404)
-                return
-            json.dump(instance, self.response, skipkeys=True, cls=APIJSONEncoder)
+        #Use that shiny new builtin method
+        findings = self._get_instances()
+        if findings is None: return
+
+        #Dump those fundings
+        json.dump(findings, self.response, skipkeys=True, cls=APIJSONEncoder)
 
     def api_query(self):
         valid = self._model.properties().keys()
@@ -411,7 +441,7 @@ class _APIModelHandler(_APIHandler):
 
         data = {
             'count': query.count(),
-            'result': query.fetch(
+            'results': query.fetch(
                 limit = runlimit,
                 offset = runoffset
             )
@@ -446,6 +476,31 @@ class _APIModelHandler(_APIHandler):
             return
 
         self.error(401)
+
+    def api_update(self):
+        #Retrieve request arguments
+        arguments = self.args
+
+        #Retrieve valid model properties
+        valid_properties = self._model.properties().keys()
+
+        #Get the ID, turn it into an instance, and deal with any errors
+        instance_key = arguments.pop('id', '')
+        if not instance_key: return self.error(401.1)
+        try:
+            instance = self._model.get(instance_key)
+        except db.BadKeyError:
+            return self.error(404.1)
+        except db.KindError:
+            return self.error(404.2)
+
+        #Iterate through given arguments and update the instance
+        for key in arguments:
+            if not key in valid_properties: return self.error(401.2)
+            setattr(instance, key, arguments[key])
+
+        #Finish the transaction
+        instance.put()
 
     def api_consoleupdate(self):
         args = self.args
@@ -559,9 +614,12 @@ class APITicketHandler(_APIModelHandler):
 #class APIServiceHandler(_APIModelHandler):
 #    _model = models.Service
 
-class DummyHandler(webapp2.RequestHandler):
-    def get(self):
-        return self.error(404)
+class DummyHandler(_APIHandler):
+    _secure = False
+    def api_echo(self):
+        return self.args
+
+class UserDummyHandler(_APIHandler): pass
 
 #Delegating the various handlers to their respective paths
 app = webapp2.WSGIApplication([
@@ -576,5 +634,6 @@ app = webapp2.WSGIApplication([
     ('/api/client_(\w+)', APIClientHandler),
     ('/api/ticket_(\w+)', APITicketHandler),
     #('/api/service_(\w+)', APIServiceHandler),
-    ('/test', DummyHandler),
+    ('/test_(\w+)', DummyHandler),
+    ('/usertest_(\w+)', UserDummyHandler),
 ], debug=True)

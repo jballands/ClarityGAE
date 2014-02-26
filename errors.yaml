@@ -1,0 +1,34 @@
+################################################################
+## 400 Error Definitions: # Use for syntax based errors
+400: 'Bad request'
+
+# 400.100 General errors for request arguments
+400.100: 'Request argument error'
+400.101: 'Required argument(s) missing'
+400.102: 'Invalid argument(s) given'
+400.103: 'Invalid data passed to argument(s)'
+
+# 400.200 Specific argument errors
+400.200: 'No session token given'
+
+
+#401 errors
+401: 'Unauthorized'
+401.1: 'Required arguments missing from request'
+401.2: 'Invalid or malformed arguments in request'
+
+################################################################
+## 403 Error Definitions: # Use for authorization based errors
+403: 'Forbidden'
+
+# 403.100 Login specific errors
+403.101: 'Invalid username given'
+403.102: 'Incorrect password given'
+
+# 403.200 API session errors
+403.201: 'Invalid session token; try logging in again'
+403.202: 'Only admins have access to this function'
+
+#404 errors
+404: 'Not found'
+404.1: 'Model instance not found (bad key)'

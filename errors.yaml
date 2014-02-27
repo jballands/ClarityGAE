@@ -7,10 +7,10 @@
 400.101: 'Required argument(s) missing'
 400.102: 'Invalid argument(s) given'
 400.103: 'Invalid data passed to argument(s)'
+400.104: 'JSON arguments enabled, but request body contained invalid JSON'
 
 # 400.200 Specific argument errors
 400.200: 'No session token given'
-
 
 #401 errors
 401: 'Unauthorized'

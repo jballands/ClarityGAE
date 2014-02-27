@@ -1,6 +1,6 @@
 application: clarity-db
 module: default
-version: unstable
+version: stable
 runtime: python27
 api_version: 1
 threadsafe: yes

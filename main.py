@@ -160,72 +160,17 @@ class APIJSONDecoder(json.JSONDecoder):
     def default(self, obj):
         return json.JSONDecoder.default(self, obj)
 
-class APIJSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, datetime.datetime):
-            return obj.strftime(datetime_format)
-        elif isinstance(obj, datetime.date):
-            return obj.strftime(date_format)
-        elif isinstance(obj, db.Key):
-            return str(obj)
-        elif isinstance(obj, db.Model):
-            properties = obj.properties()
-
-            #Resolve the object to a dictionary
-            #(only works for explicitly defined properties)
-            kvs = db.to_dict(obj)
-
-            #Get implicitly defined references (this is such a bitch)
-            for attr in dir(obj):
-                if isinstance(getattr(obj, attr), db.Query):
-                    kvs[attr] = list(getattr(obj, attr).run(keys_only=True))
-            
-            kvs.pop('password', None)
-            kvs.pop('binary', None)
-
-            for key in kvs:
-                if key == 'dateofbirth':
-                    kvs[key] = kvs[key].date()
-
-            kvs['id'] = obj.key()
-            return kvs
-        else:
-            try:
-                return json.JSONEncoder.default(self, obj)
-            except TypeError:
-                return 'CANNOT_SERIALIZE'
-
-# class APIJSONDecoder(json.JSONDecoder):
-#     def decode(self, obj):
-#         result = None
-#         try:
-#             result = datetime.strptime(obj, date_format).date
-#             result = datetime.strptime(obj, datetime_format)
-#         except: pass
-#         if result: return result
-#         return json.JSONDecoder.decode(self, obj)
+class APIJSONDecoder(json.JSONDecoder):
+    def decode(self, obj):
+        result = None
+        try:
+            result = datetime.strptime(obj, date_format).date
+            result = datetime.strptime(obj, datetime_format)
+        except: pass
+        if result: return result
+        return json.JSONDecoder.decode(self, obj)
 
 class _APIHandler(webapp2.RequestHandler):
-
-    """_errors = {
-        #401 errors
-        401: 'Unauthorized',
-        401.1: 'Required arguments missing from request',
-        401.2: 'Invalid or malformed arguments in request',
-
-        #403 errors
-        403: 'Forbidden',
-        403.1: 'Incorrect username',
-        403.2: 'Incorrect password',
-        403.3: 'Invalid session; try logging in again',
-        403.4: 'Only admins have access to this function',
-
-        #404 errors
-        404: 'Not found',
-        404.1: 'Model instance not found',
-        404.2: 'ID of incorrect model passed',
-    }"""
-
     _errors = {}
     with open('errors.yaml', 'r') as errorfile:
         _errors = yaml.load(errorfile.read())
@@ -237,9 +182,17 @@ class _APIHandler(webapp2.RequestHandler):
     def route(self, action):
         raw_arguments = self.request.arguments()
         self.args = {}
+        self.is_json = False
         
-        if raw_arguments.get('json', None):
-            self.args = json.load(self.request.body_file, cls=APIJSONDecoder)
+        if self.request.get('json', None):
+            self.is_json = True
+            logging.info('REQUEST_IS_JSON')
+            logging.info('REQUEST_JSON_BODY ' + repr(self.request.body))
+            try:
+                self.args = json.load(self.request.body_file, cls=APIJSONDecoder)
+            except ValueError:
+                logging.info('REQUEST_JSON_INVALID')
+                return self.error(400.104)
         else:
             try:
                 for argument in raw_arguments:
@@ -273,7 +226,7 @@ class _APIHandler(webapp2.RequestHandler):
         else:
             self.error(404)
     post = route
-    #get = route
+    get = route
 
     def error(self, floatcode):
         intcode = int(math.floor(floatcode))
@@ -290,8 +243,8 @@ class _APIHandler(webapp2.RequestHandler):
 
     @staticmethod
     def argDecode(key, value):
-        if key == 'password':
-            return hashlib.md5(value).hexdigest()
+        #if key == 'password':
+        #    return hashlib.md5(value).hexdigest()
         if key == 'qrcode':
             return value if re.match(r'clarity[a-f0-9]{32}$', value) is not None else None
         if key == 'binary':
@@ -417,12 +370,8 @@ class _APIModelHandler(_APIHandler):
         }, self.response, cls=APIJSONEncoder)
 
     def api_get(self):
-        #Use that shiny new builtin method
-        findings = self._get_instances()
-        if findings is None: return
-
-        #Dump those fundings
-        json.dump(findings, self.response, skipkeys=True, cls=APIJSONEncoder)
+        #Use that shiny new builtin method and the shiny new return system
+        return self._get_instances()
 
     def api_query(self):
         valid = self._model.properties().keys()
@@ -529,9 +478,9 @@ class APISessionHandler(_APIHandler):
     _secure = False
 
     def api_begin(self):
-        username = self.request.get('username', '')
-        password = self.request.get('password', '')
-        api_session = not self.request.get('console', '')
+        username = self.args.get('username', '')
+        password = self.args.get('password', '')
+        api_session = not self.args.get('console', '')
 
         user = models.Provider.all().filter('username =', username).get()
         if not user:
@@ -599,7 +548,8 @@ class APIClientHandler(_APIModelHandler):
     def api_create(self):
         image = self.args.pop('binary', None)
         if image:
-
+            if self.is_json:
+                image = base64.b64decode(image)
             #headshot = models.Headshot(binary=db.Blob(image))
             headshot = models.Headshot()
             #headshot.binary = db.Blob(image)

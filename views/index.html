@@ -45,7 +45,6 @@
                         <button class="btn btn-lg btn-primary btn-block" type="submit">Submit</button>
                     </div>
                 </div>
-                <input type="text" name="console" value="true" hidden>
             </form>
 
             <br><br><br>
@@ -96,13 +95,21 @@
             //$('#claritylogobar').css('height', '1.5em')
 
             $('#loginform').submit(function() {
-                var data = $(this).serialize();
+                var form_data = $(this).serializeArray();
+                var form_dict = {'console': true};
+
+                for (i in form_data) {
+                    form_data_entry = form_data[i];
+                    form_dict[form_data_entry['name']] = form_data_entry['value'];
+                }
+
                 $(this).children().attr('disabled', true);
                 $.ajax({
-                    'url': '/api/session_begin',
+                    'url': '/api/session_begin?json=true',
                     'method': 'post',
                     'dataType': 'json',
-                    'data': data,
+                    'contentType': 'application/json; charset=utf-8',
+                    'data': JSON.stringify(form_dict),
                     'success': loginSuccess,
                     'error': loginError,
                     'complete': loginComplete

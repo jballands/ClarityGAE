@@ -207,6 +207,7 @@
 
         $.ajax({
             'url': url,
+            'type': 'post',
             'dataType': 'json',
             'data': data,
             'success': data_dataParse,
@@ -522,6 +523,7 @@
         
         $.ajax({
             'url': String.format('/api/{0}_get?token={1}&id={2}', model, session, modelid),
+            'type': 'post',
             'dataType': 'json',
             'error': data_errorHandler,
             'success': function(data, status, xhr) {

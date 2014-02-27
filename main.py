@@ -156,9 +156,40 @@ class CronHandler(webapp2.RequestHandler):
 datetime_format = '%Y-%m-%d %H:%M:%S'
 date_format = '%Y-%m-%d'
 
-class APIJSONDecoder(json.JSONDecoder):
+class APIJSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        return json.JSONDecoder.default(self, obj)
+        if isinstance(obj, datetime.datetime):
+            return obj.strftime(datetime_format)
+        elif isinstance(obj, datetime.date):
+            return obj.strftime(date_format)
+        elif isinstance(obj, db.Key):
+            return str(obj)
+        elif isinstance(obj, db.Model):
+            properties = obj.properties()
+
+            #Resolve the object to a dictionary
+            #(only works for explicitly defined properties)
+            kvs = db.to_dict(obj)
+
+            #Get implicitly defined references (this is such a bitch)
+            for attr in dir(obj):
+                if isinstance(getattr(obj, attr), db.Query):
+                    kvs[attr] = list(getattr(obj, attr).run(keys_only=True))
+            
+            kvs.pop('password', None)
+            kvs.pop('binary', None)
+
+            for key in kvs:
+                if key == 'dateofbirth':
+                    kvs[key] = kvs[key].date()
+
+            kvs['id'] = obj.key()
+            return kvs
+        else:
+            try:
+                return json.JSONEncoder.default(self, obj)
+            except TypeError:
+                return 'CANNOT_SERIALIZE'
 
 class APIJSONDecoder(json.JSONDecoder):
     def decode(self, obj):

@@ -193,13 +193,14 @@ class APIJSONEncoder(json.JSONEncoder):
 
 class APIJSONDecoder(json.JSONDecoder):
     def decode(self, obj):
+        logging.info('DECODING ' + repr(obj))
         result = None
         try:
-            result = datetime.strptime(obj, date_format).date
-            result = datetime.strptime(obj, datetime_format)
-        except: pass
+            result = datetime.datetime.strptime(obj, date_format).date()
+            result = datetime.datetime.strptime(obj, datetime_format)
+        except ValueError: pass
         if result: return result
-        return json.JSONDecoder.decode(self, obj)
+        return super(APIJSONDecoder, self).decode(obj)
 
 class _APIHandler(webapp2.RequestHandler):
     _errors = {}
@@ -210,29 +211,31 @@ class _APIHandler(webapp2.RequestHandler):
     
     _restricted = ['remove',]
 
-    def route(self, action):
+    def route(self, action, method='post'):
         raw_arguments = self.request.arguments()
         self.args = {}
-        self.is_json = False
+        self.is_json = True
         
-        if self.request.get('json', None):
-            self.is_json = True
+        if method == 'post':
             logging.info('REQUEST_IS_JSON')
             logging.info('REQUEST_JSON_BODY ' + repr(self.request.body))
             try:
-                self.args = json.load(self.request.body_file, cls=APIJSONDecoder)
+                self.args = json.load(self.request.body_file)
+                for key in self.args:
+                    if key in models.date_properties:
+                        self.args[key] = datetime.datetime.strptime(self.args[key], date_format).date()
+                    elif key in models.datetime_properties:
+                        self.args[key] = datetime.datetime.strptime(self.args[key], datetime_format)
             except ValueError:
-                logging.info('REQUEST_JSON_INVALID')
-                return self.error(400.104)
-        else:
-            try:
-                for argument in raw_arguments:
-                    self.args[argument] = self.argDecode(argument, self.request.get(argument))
-                if 'pk' in raw_arguments:
-                    self.args['value'] = self.argDecode(self.args['name'], self.args['value'])
-            except ValueError:
-                self.error(401)
-                return
+                if self.request.body:
+                    logging.info('REQUEST_JSON_INVALID')
+                    return self.error(400.104)
+        elif method == 'get':
+            self.args = {key: self.request.get(key) for key in self.request.arguments()}
+
+        if 'qrcode' in self.args:
+            if not re.match(r'clarity[a-f0-9]{32}$', self.args['qrcode']):
+                return self.error(400.105)
 
         #Remove the token argument and log it to the console
         self.token = self.args.pop('token', None)
@@ -257,7 +260,10 @@ class _APIHandler(webapp2.RequestHandler):
         else:
             self.error(404)
     post = route
-    get = route
+    
+    def get(self, *args, **kwargs):
+        kwargs['method'] = 'get'
+        self.route(*args, **kwargs)
 
     def error(self, floatcode):
         intcode = int(math.floor(floatcode))
@@ -353,12 +359,7 @@ class _APIModelHandler(_APIHandler):
 
         #If a list of IDs is give, do dat
         if 'ids' in self.args:
-            keylist_raw = self.args.get('id')
-
-            #Decode the JSON list with a try-catch for invalid JSON
-            try:
-                keylist = json.loads(keylist_raw)
-            except ValueError: return self.error(401.2) if throw_errors else None
+            keylist = self.args.get('ids')
 
             #Return those results. THANK YOU GOOGLE FOR MAKING THIS EASY!
             return db.get(keylist)
@@ -592,6 +593,25 @@ class APIClientHandler(_APIModelHandler):
 class APITicketHandler(_APIModelHandler):
     _model = models.Ticket
 
+class APIAPPHandler(_APIHandler):
+    def api_tickets_by_ticket(self):
+        try:
+            source_ticket = models.Ticket.all().filter('qrcode =', self.args['qrcode']).get()
+        except: return self.error(400.201)
+
+        output = {}
+        output['patient'] = source_ticket.client
+        output['tickets'] = []
+
+        for ticket in source_ticket.client.tickets:
+            output['tickets'].append({
+                'id': ticket.key(),
+                'opened': ticket.opened,
+                'closed': ticket.closed
+            })
+
+        self.respond_json(output)
+
 #class APIServiceHandler(_APIModelHandler):
 #    _model = models.Service
 
@@ -599,6 +619,20 @@ class DummyHandler(_APIHandler):
     _secure = False
     def api_echo(self):
         return self.args
+
+    def api_dummies(self):
+        client = models.Client(
+            name_first = 'testman',
+            name_last = 'doop doop',
+            dateofbirth = datetime.date(day=2, month=2, year=1990),
+            sex = "male"
+        )
+        client.put()
+        for i in range(6):
+            models.Ticket(
+                client = client,
+                qrcode = str(i * 10)
+            ).put()
 
 class UserDummyHandler(_APIHandler): pass
 
@@ -617,4 +651,7 @@ app = webapp2.WSGIApplication([
     #('/api/service_(\w+)', APIServiceHandler),
     ('/test_(\w+)', DummyHandler),
     ('/usertest_(\w+)', UserDummyHandler),
+
+    #A few app-only handlers
+    ('/api/app/(\w+)', APIAPPHandler)
 ], debug=True)

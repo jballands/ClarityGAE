@@ -5,6 +5,19 @@ from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 
+date_properties = [
+    'dateofbirth'
+]
+
+datetime_properties = [
+    'datetime_created',
+    'datetime_terminated',
+    'creation',
+    'expiration',
+    'opened',
+    'closed'
+]
+
 class Headshot(db.Model):
     binary = db.BlobProperty(required=False)
     mimetype = db.StringProperty(required=False, default='image/jpeg')
@@ -77,7 +90,7 @@ class Ticket(db.Model):
     wheelchair = db.IntegerProperty(required=False, default=0)
     
     loan_status = db.IntegerProperty(required=False, default=0)
-    load_amount = db.IntegerProperty(required=False, default=0)
+    loan_amount = db.IntegerProperty(required=False, default=0)
 
     #Activity log (wip)
 '''

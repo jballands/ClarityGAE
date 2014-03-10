@@ -8,13 +8,17 @@
         <script src="/static/js/bootstrap-editable.min.js"></script>
 
         <script src="/static/js/moment.min.js"></script>
-    </head>
-    <body>
-
+        <script src="/static/js/jquery.center.min.js"></script>
+        
+        
         <script>
             var session = '{{ session.key() }}';
             var user = $.parseJSON('{{ encode(session.user) }}');
         </script>
+        
+        <script src="/static/js/console.js"></script>
+    </head>
+    <body>
 
         <div class="navbar text-center" id="claritylogobar">
             <img src="/static/image/ClarityLogo_padded_white.svg" id="claritylogo">
@@ -57,6 +61,26 @@
         <!-- SETTINGS TAB END -->
 
         </div>
+        
+        <div id="loader" hidden>
+            <div class="loader"></div>
+        </div>
+        
+        <style>
+            #loader {
+                width: 160px;
+                height: 160px;
+                padding: 16px;
+                position:fixed;
+                top:50%;
+                left:50%;
+                margin-top:-90px;
+                margin-left:-90px;
+                
+                background-color: #ddd;
+                border-radius: 5px;
+            }
+        </style>
 
     </body>
 </html>

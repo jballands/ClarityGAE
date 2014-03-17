@@ -1,10 +1,10 @@
 models:
     -   client
     -   provider
-#    -   ticket
+    -   ticket
 
 names:
-    client: Clients
+    client: Patients
     provider: Providers
     ticket: Tickets
 
@@ -35,189 +35,216 @@ sexes: &sexes
     - {value: male, text: male}
     - {value: female, text: female}
 
+statuses: &statuses
+    - {value: 0, text: Not Approved}
+    - {value: 1, text: Approved / In Progress}
+    - {value: 2, text: Rendered}
+
 properties:
 
     client:
     -   name: id
         type: readonly
-        in_table: false
-        in_edit: true
-        in_create: false
+        inTable: false
+        inDetail: true
+        inCreate: false
         required: false
 
     -   name: headshot
         type: headshot
-        in_table: true
-        in_edit: false
-        in_create: false
+        inTable: true
+        inDetail: false
+        inCreate: false
         required: false
 
     -   name: name_prefix
         type: select
-        in_table: false
-        in_edit: true
-        in_create: true
+        inTable: false
+        inDetail: true
+        inCreate: true
         required: false
         options: *prefixes
 
     -   name: name_first
         type: text
-        in_table: true
-        in_edit: true
-        in_create: true
+        inTable: true
+        inDetail: true
+        inCreate: true
         required: true
 
     -   name: name_middle
         type: text
-        in_table: false
-        in_edit: true
-        in_create: true
+        inTable: false
+        inDetail: true
+        inCreate: true
         required: false
 
     -   name: name_last
         type: text
-        in_table: true
-        in_edit: true
-        in_create: true
+        inTable: true
+        inDetail: true
+        inCreate: true
         required: true
 
     -   name: name_suffix
         type: select
-        in_table: false
-        in_edit: true
-        in_create: true
+        inTable: false
+        inDetail: true
+        inCreate: true
         required: false
         options: *suffixes
 
     -   name: dateofbirth
         type: combodate
-        in_table: true
-        in_edit: true
-        in_create: true
+        inTable: true
+        inDetail: true
+        inCreate: true
         required: true
 
     -   name: sex
         type: select
-        in_table: true
-        in_edit: true
-        in_create: true
+        inTable: true
+        inDetail: true
+        inCreate: true
         required: true
         options: *sexes
 
     -   name: location
         type: textarea
-        in_table: false
-        in_edit: true
-        in_create: true
+        inTable: false
+        inDetail: true
+        inCreate: true
+        required: false
+    
+    -   name: tickets
+        type: modelList
+        model: ticket
+        inTable: false
+        inDetail: true
+        inCreate: false
         required: false
 
     provider:
     -   name: id
         type: readonly
-        in_table: false
-        in_edit: true
-        in_create: false
+        inTable: false
+        inDetail: true
+        inCreate: false
         required: false
 
     -   name: headshot
         type: headshot
-        in_table: true
-        in_edit: false
-        in_create: false
+        inTable: true
+        inDetail: false
+        inCreate: false
         required: false
 
     -   name: name_prefix
         type: select
-        in_table: false
-        in_edit: true
-        in_create: true
+        inTable: false
+        inDetail: true
+        inCreate: true
         required: false
         options: *prefixes
 
     -   name: name_first
         type: text
-        in_table: true
-        in_edit: true
-        in_create: true
+        inTable: true
+        inDetail: true
+        inCreate: true
         required: true
 
     -   name: name_middle
         type: text
-        in_table: false
-        in_edit: true
-        in_create: true
+        inTable: false
+        inDetail: true
+        inCreate: true
         required: false
 
     -   name: name_last
         type: text
-        in_table: true
-        in_edit: true
-        in_create: true
+        inTable: true
+        inDetail: true
+        inCreate: true
         required: true
 
     -   name: name_suffix
         type: select
-        in_table: false
-        in_edit: true
-        in_create: true
+        inTable: false
+        inDetail: true
+        inCreate: true
         required: false
         options: *suffixes
 
     -   name: username
         type: text
-        in_table: true
-        in_edit: true
-        in_create: true
+        inTable: true
+        inDetail: true
+        inCreate: true
         required: true
 
     -   name: password
         type: password
-        in_table: false
-        in_edit: true
-        in_create: true
+        inTable: false
+        inDetail: true
+        inCreate: true
         required: true
 
     -   name: admin
         type: select
-        in_table: true
-        in_edit: true
-        in_create: true
+        inTable: true
+        inDetail: true
+        inCreate: true
         required: true
         options: *truefalse
 
     ticket:
     -   name: id
         type: readonly
-        in_table: false
-        in_edit: true
-        in_create: false
+        inTable: false
+        inDetail: true
+        inCreate: false
         required: false
 
     -   name: qrcode
         type: qrcode
-        in_table: true
-        in_edit: false
-        in_create: false
-        required: false
+        inTable: true
+        inDetail: true
+        inCreate: true
+        required: true
 
     -   name: client
         type: model
         model: client
-        in_table: true
-        in_edit: true
-        in_create: true
+        inTable: true
+        inDetail: true
+        inCreate: true
         required: true
 
     -   name: opened
         type: readonly
-        in_table: true
-        in_edit: false
-        in_create: false
+        inTable: true
+        inDetail: false
+        inCreate: false
         required: false
 
     -   name: closed
         type: readonly
-        in_table: true
-        in_edit: false
-        in_create: false
+        inTable: true
+        inDetail: false
+        inCreate: false
         required: false
+    
+    -   {name: left_leg, type: select, inDetail: true, inCreate: true, options: *statuses}
+    -   {name: right_leg, type: select, inDetail: true, inCreate: true, options: *statuses}
+    -   {name: left_shin, type: select, inDetail: true, inCreate: true, options: *statuses}
+    -   {name: right_shin, type: select, inDetail: true, inCreate: true, options: *statuses}
+    -   {name: left_arm, type: select, inDetail: true, inCreate: true, options: *statuses}
+    -   {name: right_arm, type: select, inDetail: true, inCreate: true, options: *statuses}
+    -   {name: sewing_machine, type: select, inDetail: true, inCreate: true, options: *statuses}
+    -   {name: crutches, type: select, inDetail: true, inCreate: true, options: *statuses}
+    -   {name: tricycle, type: select, inDetail: true, inCreate: true, options: *statuses}
+    -   {name: tea_stand, type: select, inDetail: true, inCreate: true, options: *statuses}
+    -   {name: wheelchair, type: select, inDetail: true, inCreate: true, options: *statuses}
+    -   {name: loan_status, type: select, inDetail: true, inCreate: true, options: *statuses}
+    -   {name: loan_amount, type: text, inDetail: true, inCreate: true}

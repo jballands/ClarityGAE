@@ -23,6 +23,8 @@ class Headshot(db.Model):
     mimetype = db.StringProperty(required=False, default='image/jpeg')
 
 class Provider(db.Model):
+    _order = 'name_last'
+    
     #General properties:
     name_prefix = db.StringProperty(required=False)
     name_first = db.StringProperty(required=True)
@@ -55,6 +57,8 @@ class Session(db.Model):
         self.put()
 
 class Client(db.Model):
+    _order = 'name_last'
+    
     name_prefix = db.StringProperty(required=False)
     name_first = db.StringProperty(required=True)
     name_middle = db.StringProperty(required=False)
@@ -67,6 +71,8 @@ class Client(db.Model):
     headshot = db.ReferenceProperty(Headshot, required=False)
 
 class Ticket(db.Model):
+    _order = '-opened'
+    
     #Basic ticket information and reference properties
     qrcode = db.StringProperty(required=False)
     client = db.ReferenceProperty(Client, required=True, collection_name='tickets')

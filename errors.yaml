@@ -1,36 +1,43 @@
 ################################################################
 ## 400 Error Definitions: # Use for syntax based errors
-400: 'Bad request'
+400: Bad request
 
-# 400.100 General errors for request arguments
-400.100: 'Request argument error'
-400.101: 'Required argument(s) missing'
-400.102: 'Invalid argument(s) given'
-400.103: 'Invalid data passed to argument(s)'
-400.104: 'JSON arguments enabled, but request body contained invalid JSON'
-400.105: 'Non-Clarity QR code given'
+# 400.1xx General errors for request arguments
+400.100: Request argument error
+400.101: Required argument(s) missing
+400.102: Invalid argument(s) given
+400.103: Invalid data passed to argument(s)
+400.104: JSON arguments enabled, but request body contained invalid JSON
+400.105: Non-Clarity QR code given
+400.106: QR code already in use, please choose another
 
-# 400.200 Specific argument errors
-400.200: 'No session token given'
-400.201: 'Invalid QR code given for searching'
+# 400.2xx Specific argument errors
+400.200: No session token given
+400.201: Invalid QR code given for searching
 
 #401 errors
-401: 'Unauthorized'
-401.1: 'Required arguments missing from request'
-401.2: 'Invalid or malformed arguments in request'
+401: Unauthorized
+401.1: Required arguments missing from request
+401.2: Invalid or malformed arguments in request
 
 ################################################################
 ## 403 Error Definitions: # Use for authorization based errors
-403: 'Forbidden'
+403: Forbidden
 
-# 403.100 Login specific errors
-403.101: 'Invalid username given'
-403.102: 'Incorrect password given'
+# 403.1xx Login specific errors
+403.101: Invalid username given
+403.102: Incorrect password given
 
-# 403.200 API session errors
-403.201: 'Invalid session token; try logging in again'
-403.202: 'Only admins have access to this function'
+# 403.2xx API session errors
+403.201: Invalid session token; try logging in again
+403.202: Only admins have access to this function
 
-#404 errors
-404: 'Not found'
-404.1: 'Model instance not found (bad key)'
+################################################################
+## 404 Error Definitions: # Use for 'not found' errors
+404: Not found
+
+# 404.1xx General 404 errors
+404.100: Not found
+
+# 404.2xx Specific 404 errors
+404.201: Scanned ticket not found in database

@@ -77,7 +77,7 @@ class ConsoleHandler(webapp2.RequestHandler):
     def get(self):
         session = _APIHandler.session_from_token(self.request.cookies.get('clarity-console-session', ''))
         if not session:
-            self.redirect('/login')
+            self.redirect('/')
             return
         if not session.user.admin:
             self.error(403)
@@ -125,7 +125,7 @@ class QRHandler(webapp2.RequestHandler):
         else:
             self.response.write(markup)
 
-class ConsoleLoginHandler(webapp2.RequestHandler):
+'''class ConsoleLoginHandler(webapp2.RequestHandler):
     def get(self):
         session = _APIHandler.session_from_token(self.request.cookies.get('clarity-console-session', ''))
         if self.request.get('close', '') == 'true':
@@ -141,7 +141,7 @@ class ConsoleLoginHandler(webapp2.RequestHandler):
                     'request': self.request
                 }
                 #self.response.write(_jinja.get_template('login.html').render(values))
-                self.response.write(JINJA('login.html').render(values))
+                self.response.write(JINJA('login.html').render(values))'''
 
 class CronHandler(webapp2.RequestHandler):
     def get(self, action):
@@ -173,8 +173,11 @@ class APIJSONEncoder(json.JSONEncoder):
 
             #Get implicitly defined references (this is such a bitch)
             for attr in dir(obj):
-                if isinstance(getattr(obj, attr), db.Query):
-                    kvs[attr] = list(getattr(obj, attr).run(keys_only=True))
+                try:
+                    if isinstance(getattr(obj, attr), db.Query):
+                        kvs[attr] = list(getattr(obj, attr).run(keys_only=True))
+                except db.ReferencePropertyResolveError:
+                    continue
             
             kvs.pop('password', None)
             kvs.pop('binary', None)
@@ -233,13 +236,16 @@ class _APIHandler(webapp2.RequestHandler):
         elif method == 'get':
             self.args = {key: self.request.get(key) for key in self.request.arguments()}
 
-        if 'qrcode' in self.args:
-            if not re.match(r'clarity[a-f0-9]{32}$', self.args['qrcode']):
-                return self.error(400.105)
+        #if 'qrcode' in self.args:
+        #    if not re.match(r'clarity[a-f0-9]{32}$', self.args['qrcode']):
+        #        return self.error(400.105)
 
         #Remove the token argument and log it to the console
         self.token = self.args.pop('token', None)
         logging.info('REQUEST_TOKEN ' + repr(self.token))
+        
+        #Verify the arguments
+        self.verify_args()
 
         #Log the arguments to assist with error debugging
         logging.info('REQUEST_ARGS ' + repr(self.args))
@@ -278,6 +284,13 @@ class _APIHandler(webapp2.RequestHandler):
 
     def respond_json(self, data):
         json.dump(data, self.response, cls=APIJSONEncoder, skipkeys=True)
+    
+    def verify_args(self):
+        for key in self.args:
+            value = self.args[key]
+            
+            if key == 'qrcode':
+                if not re.match(r'clarity[a-f0-9]{32}$', value): return self.error(400.105)
 
     @staticmethod
     def argDecode(key, value):
@@ -420,6 +433,9 @@ class _APIModelHandler(_APIHandler):
                 self.error(401)
                 return
             query = query.filter(arg + ' =', self.request.get(arg, ''))
+        
+        if hasattr(self._model, '_order'):
+            query = query.order(self._model._order)
 
         data = {
             'count': query.count(),
@@ -432,32 +448,11 @@ class _APIModelHandler(_APIHandler):
         json.dump(data, self.response, skipkeys=True, cls=APIJSONEncoder)
 
     def api_remove(self):
-        args = self.args
-        if 'id' in args:
-            #instancekey = self.request.get('id')
-            instancekey = args['id']
-            try:
-                instance = self._model.get(instancekey)
-            except db.BadKeyError:
-                self.error(404)
-                return
-            except db.KindError:
-                self.error(401)
-                return
-            instance.delete()
-            return
-        if 'ids' in args:
-            try:
-                #keylist = json.loads(self.request.get('ids'))
-                keylist = json.loads(args['ids'])
-                logging.info('KEYLIST '+ repr(keylist))
-            except ValueError:
-                self.error(401)
-                return
-            db.delete(keylist)
-            return
-
-        self.error(401)
+        #Use that shiny new method I made
+        given = self._get_instances()
+        
+        if isinstance(given, (db.Model, list)):
+            db.delete(given)
 
     def api_update(self):
         #Retrieve request arguments
@@ -485,27 +480,20 @@ class _APIModelHandler(_APIHandler):
         instance.put()
 
     def api_consoleupdate(self):
-        args = self.args
-        instancekey = args['pk']
-
-        try:
-            instance = self._model.get(instancekey)
-        except db.BadKeyError:
-            self.error(404)
-            return
-        except db.KindError:
-            self.error(401)
-            return
-
-        prop = args['name']
-        value = args['value']
-
-        if not prop in self._model.properties().keys():
-            self.error(401)
-            return
-
-        setattr(instance, prop, value)
-        instance.put()
+        oldargs = self.args
+        
+        name = oldargs['name']
+        value = oldargs['value']
+        
+        if isinstance(self._model.properties()[name], db.IntegerProperty):
+            value = int(value)
+        
+        self.args = {
+            'id': oldargs['pk'],
+            name: value
+        }
+        self.verify_args()
+        return self.api_update()
 
 class APISessionHandler(_APIHandler):
     _secure = False
@@ -593,12 +581,17 @@ class APIClientHandler(_APIModelHandler):
 
 class APITicketHandler(_APIModelHandler):
     _model = models.Ticket
+    def api_create(self):
+        if models.Ticket.all().filter('qrcode =', self.args['qrcode']).get(): return self.error(400.106)
+        _APIModelHandler.api_create(self)
 
 class APIAPPHandler(_APIHandler):
     def api_tickets_by_ticket(self):
         try:
             source_ticket = models.Ticket.all().filter('qrcode =', self.args['qrcode']).get()
         except: return self.error(400.201)
+        
+        if not source_ticket: return self.error(404.201)
 
         output = {}
         output['patient'] = source_ticket.client
@@ -642,7 +635,7 @@ app = webapp2.WSGIApplication([
     ('/', IndexHandler),
     ('/console', ConsoleHandler),
     ('/console/qr', QRHandler),
-    ('/login', ConsoleLoginHandler),
+    #('/login', ConsoleLoginHandler),
     ('/cron/(\w+)', CronHandler),
     ('/api/session_(\w+)', APISessionHandler),
     ('/api/provider_(\w+)', APIProviderHandler),

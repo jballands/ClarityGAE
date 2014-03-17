@@ -320,7 +320,8 @@ Editableform is linked with one of input types, e.g. 'text', 'select' etc.
                 params = {
                     name: this.options.name || '',
                     value: submitValue,
-                    pk: pk 
+                    pk: pk,
+                    token: this.options.token //SPG2
                 };
 
                 //additional params
@@ -338,8 +339,9 @@ Editableform is linked with one of input types, e.g. 'text', 'select' etc.
                     //send ajax to server and return deferred object
                     return $.ajax($.extend({
                         url     : this.options.url,
-                        data    : params,
-                        type    : 'POST'
+                        data    : JSON.stringify(params), //SPG2
+                        type    : 'POST',
+                        contentType: 'application/json; charset=utf-8' //SPG2
                     }, this.options.ajaxOptions));
                 }
             }

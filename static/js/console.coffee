@@ -6,35 +6,54 @@ root.dataConfig = {}
 root.dataCurrentModel = ''
 root.dataCurrentQuery = {}
 root.dataCurrentOffset = 0
+
+root.dataFilters = {}
+root.dataPageTotal = 0
+#root.dataCurrentOffset = 0
+root.dataPageMaxResults = 16
 #END Console variables
 
 initialize = ->
+    #Bind the buttons
+    ($ "#data_buttonDeleteRecord").click dataDeleteRecords
+    ($ "#data_buttonCreateRecord")
+    ($ "#data_buttonRefresh").click -> do dataLoadTable
+    
+    #Bind some events
+    ($ '#data_modalDetail').on "hidden.bs.modal", -> do dataLoadTable
+    ($ '#data_modalCreateRecord').on "hidden.bs.modal", -> do dataLoadTable
+    
     #Disable any stragglers
     $('.load-disable').prop 'disabled', true
-    (apiCall '/static/data/data-config.json', method = 'get').done (data) ->
+    (apiCall '/static/data/data-config.json', {}, false, "GET").done (data) ->
         root.dataConfig = data
         do dataInitButtons
 
 #Api call method for stadardizing api calls :D
-apiCall = (url, data={}, method='post') ->
-    #Disable elements that are marked to be
-    $('.load-disable').prop 'disabled', true
-    
-    #Show that spiffy loader sprite
-    do $('#loader').show
+apiCall = (url, data={}, lazy=false, method='POST') ->
+    if not lazy
+        #Disable elements that are marked to be
+        $('.load-disable').prop 'disabled', true
+
+        #Show that spiffy loader sprite
+        do $('#loader').show
     
     #Start that AJAX up
     return $.ajax
         'url': url
-        'method': method
+        'type': method
         'contentType': 'application/json; charset=utf-8'
         'dataType': 'json'
         'data': JSON.stringify data
         'error': (xhr, status, error) ->
-            bootbox.alert (xhr.responseText or error)
+            if not lazy
+                try
+                    message = xhr.responseText or error
+                    bootbox.alert message
         'complete': ->
-            do $('#loader').hide
-            $('.load-disable').prop 'disabled', false
+            if not lazy
+                do $('#loader').hide
+                $('.load-disable').prop 'disabled', false
 
 #Runs after the config file is loaded and deploys the selection buttons
 dataInitButtons = ->
@@ -45,12 +64,19 @@ dataInitButtons = ->
         button = $(markup).appendTo $('#data_buttonRow')
         button.data 'model', model
         button.click ->
+            #Clear page offset
+            root.dataCurrentOffset = 0
             dataLoadTable $(this).data('model')
     do $('#data_buttonRow .btn').button
     return
 
 #Calls the api, and passes the data to the parser
 dataLoadTable = (model = root.dataCurrentModel, query = root.dataCurrentQuery, offset = root.dataCurrentOffset) ->
+    #Clear the table and pagination
+    do ($ '#data_tableHead').children().remove
+    do ($ '#data_tableBody').children().remove
+    do ($ "#data_pagination").children().remove
+    
     #Set it again, so the parser can see changes
     root.dataCurrentModel = model
     
@@ -61,6 +87,7 @@ dataLoadTable = (model = root.dataCurrentModel, query = root.dataCurrentQuery, o
     data =
         'token': session
         'offset': offset
+        'limit': root.dataPageMaxResults
     
     #Put the query arguments into the request data
     for key, value of query
@@ -75,6 +102,7 @@ dataLoadTable = (model = root.dataCurrentModel, query = root.dataCurrentQuery, o
 
 #Parses retrieved data and loads it in to the table
 dataParseTable = (data) ->
+    #alert JSON.stringify(data)
     #Get some variables to make life easier later on
     model = root.dataCurrentModel
     modelProps = root.dataConfig['properties'][model]
@@ -82,8 +110,312 @@ dataParseTable = (data) ->
     tableBody = $ '#data_tableBody'
     
     #Append the checkbox icon cell
-    tableHead.append '<td>&nbsp;<span class="glyphicon glyphicon-ok"></span>&nbsp;</td>'
+    tableHead.append '<th>&nbsp;<span class="glyphicon glyphicon-ok"></span>&nbsp;</th>'
     
+    #Put in the property headers
+    for prop in modelProps
+        continue if not prop['inTable']
+        tableHead.append "<th><small>#{prop['name']}</small></th>"
+    
+    #Put in an empty header for the edit button column
+    tableHead.append "<th></th>"
+    
+    #Iterate through instances passed via data and insert all their shit
+    for instance in data['results']
+        row = ($ "<tr></tr>").appendTo tableBody
+        row.data 'id', instance['id']
+        
+        #Insert checkbox
+        cell = ($ "<td></td>").appendTo row
+        checkbox = ($ "<input type='checkbox' class='data_tableCheck'>").appendTo cell
+        checkbox.data "id", instance["id"]
+        
+        for prop in modelProps
+            continue if not prop['inTable']
+            cell = ($ "<td></td>").appendTo row
+            dataMakeTableView prop, instance, cell
+        
+        #Insert edit button
+        cell = ($ "<td></td>").appendTo row
+        button = ($ "<button class='btn btn-success btn-xs btn-block'>VIEW / EDIT</button>").appendTo cell
+        button.data 'model', model
+        button.data 'id', instance["id"]
+        button.click ->
+            dataDetailRecord ($ this).data("model"), ($ this).data("id")
+    
+    #Build the pagination buttons
+    container = $ '#data_pagination'
+    pages = Math.ceil(data["count"] / root.dataPageMaxResults)
+    current = Math.floor(root.dataCurrentOffset / root.dataPageMaxResults)
+
+    #Store the total page count for future reference
+    root.dataPageTotal = pages
+
+    #If there's only one page, there's no need for pagination
+    if pages > 1
+        #Insert back button and link it to its function
+        link_back = ($ '<li><a href="#">&laquo;</a></li>').appendTo container
+        link_back.click dataPageBack
+
+        for i in [0 .. pages - 1]
+            entry = ($ '<li></li>').appendTo container
+            link = ($ '<a href="#"></a>').appendTo entry
+
+            link.attr 'offset', (i * dataPageMaxResults)
+            link.text i + 1
+
+            if i is current
+                entry.addClass 'active'
+
+            #Link the button to its function
+            link.click(dataPageButton);
+
+        #Insert forward button and link it to its function
+        link_forward = ($ '<li><a href="#">&raquo;</a></li>').appendTo container
+        link_forward.click dataPageForward
+
+    #Remove all the filter fields from the selection dropdown
+    do ($ '#data_filterSelect>option:enabled').remove
+
+    #Insert filter options for the current model
+    selector = $ '#data_filterSelect'
+    for property in modelProps
+        option = ($ '<option></option>').appendTo selector
+        option.val property['name']
+        option.text property['name']
+
+dataMakeTableView = (property, instance, cell) ->
+    name = property["name"]
+    value = instance[name]
+    
+    #If empty, just make the table say empty :P
+    if not value
+        cell.append "<em>Empty</em>"
+        return
+    
+    #If boolean, convert to string
+    if value is true or false
+        value = JSON.stringify value
+    
+    #Switch based on property name (for specialized types)
+    switch property["type"]
+        
+        #Button to open a bootbox alert with the image inside
+        when "headshot"
+            #If no headshot, insert an X glyphicon
+            if not value
+                cell.append "<span class='glyphicon glyphicon-remove'></span>"
+                return
+            
+            button = ($ "<button class='btn btn-sm btn-success'><span class='glyphicon glyphicon-picture'></span></button>").appendTo cell
+            button.data "href", "/api/headshot_download?token=#{session}&id=#{value}"
+            button.click ->
+                href = ($ this).data "href"
+                bootbox.alert "<div class='text-center'><h2>Headshot</h2><hr><img src='#{href}'></div>"
+            return
+        
+        #For linking other models
+        when "model"
+            model = property["model"]
+            button = ($ "<button class='btn btn-success btn-xs btn-block' disabled>. . .</button>").appendTo cell
+            button.data "model", model
+            button.data "id", instance[name]
+            
+            #Link the button
+            button.click ->
+                dataDetailRecord ($ this).data("model"), ($ this).data("id")
+            
+            #Create a lazy loader for the button
+            request = apiCall "/api/#{model}_get",
+                "token": session
+                "id": instance[name],
+                true
+            request.done -> button.prop "disabled", false
+            
+            #Switch for button behavior after loading
+            switch model
+                when "client"
+                    request.done (data) -> button.text "#{data['name_first']} #{data['name_last']}"
+                    break
+            
+            return
+        
+        #For linking and creating qr codes
+        when "qrcode"
+            button = ($ "<button class='btn btn-sm btn-success'><span class='glyphicon glyphicon-qrcode'></span></button>").appendTo cell
+            button.data "data", value
+            button.click ->
+                markup = "<div class='text-center'><h2>View QR Code</h2><hr><img class='qrcode'></div>"
+                bootbox.alert(markup)
+                setTimeout ->
+                    qr.image
+                        "image": ($ "img.qrcode").get 0,
+                        "value": ($ this).attr "data",
+                        "size": 50
+                , 200
+            return
+    
+    #If the value doesn't need special attention, just put the raw data in the table
+    cell.append value
+
+dataDetailRecord = (model, modelID) ->
+    #Clear the modal's contents
+    ($ '#data_modalDetailTable').children().each ->
+        do ($ this).remove
+    
+    #Create a non-lazy loader for loading the instance
+    request = apiCall "/api/#{model}_get",
+        "token": session
+        "id": modelID
+    
+    request.done (data) ->
+        #Load some variables up
+        table = ($ "#data_modalDetailTable")
+        modelProps = root.dataConfig["properties"][model]
+        
+        #Iterate through props and put 'em all in the table
+        for prop in modelProps
+            continue if not prop["inDetail"]
+            row = ($ "<tr></tr>").appendTo table
+            
+            #Insert label cell
+            row.append "<td><strong>#{prop['name']}</strong></td>"
+            
+            #Put in a cell and pass it to the factory
+            cell = ($ "<td></td>").appendTo row
+            dataMakeDetailView model, prop, data, cell
+        
+        #Show the modal
+        ($ '#data_modalDetail').modal 'show'
+            
+            
+            
+
+dataMakeDetailView = (model, property, instance, cell, empty = false) ->
+    name = property["name"]
+    type = property["type"]
+    value = instance[name]
+    
+    if typeof(value) is 'boolean'
+        value = JSON.stringify value
+    
+    #Start assembling the x-editable thingy
+    editor = $( "<a href='#'></a>").appendTo cell
+    url = "/api/#{model}_consoleupdate"
+    options =
+        "name": name
+        "type": type
+        "url": url
+        "pk": instance["id"]
+        "value": value
+        "token": session
+    
+    #Switch the type for specialty types
+    switch type
+        
+        when "readonly"
+            do editor.remove
+            cell.append value
+            return
+        
+        when 'select'
+            options['source'] = property["options"]
+            break
+
+        when 'password'
+            options['emptytext'] = 'Click to Change'
+            break
+
+        when 'textarea'
+            options['display'] = (value, sourceData) ->
+                if value.length > 0
+                    ($ this).text '. . .'
+            break
+
+        when 'combodate'
+            options['format'] = 'YYYY-MM-DD'
+            options['inputclass'] = 'input-sm'
+            options['combodate'] =
+                'minYear': 1900
+                'maxYear': new Date().getFullYear()
+            break
+        
+        when "model"
+            options["type"] = "text"
+            break
+        
+        when 'modelList'
+            do editor.remove
+            #If there aren't any linked models, insert "Empty"
+            if value.length is 0
+                cell.append "<em>Empty</em>"
+            
+            #Create a button for each linked ID
+            for linkedID in value
+                #Create the button
+                button = ($ "<button class='btn btn-success btn-xs btn-block' disabled>. . .</button>").appendTo cell
+                cell.append "<br>"
+                button.data "model", property["model"]
+                button.data "id", linkedID
+                button.click ->
+                    dataDetailRecord ($ this).data("model"), ($ this).data("id")
+                
+                #Start the lazy loader
+                request = apiCall "/api/#{property['model']}_get",
+                    "token": session
+                    "id": linkedID,
+                    true
+                
+                #Re-enable the button if the request succeeds
+                request.done -> button.prop "disabled", false
+                
+                #Switch for the model type to determine the button's text
+                switch property["model"]
+                    when "ticket"
+                        request.done (data) -> button.text "Opened: #{data['opened']}"
+                        break
+                
+            return
+        
+        when "qrcode"
+            return dataMakeTableView property, instance, cell
+                
+    
+    #Initialize the x-editable
+    editor.editable options
+
+dataPageBack = ->
+    root.dataCurrentOffset -= root.dataPageMaxResults
+    if root.dataCurrentOffset < 0
+        root.dataCurrentOffset = 0
+    do dataLoadTable
+
+dataPageForward = ->
+    root.dataCurrentOffset += root.dataPageMaxResults
+    if root.dataCurrentOffset is root.dataPageMaxResults * root.dataPageTotal
+        root.dataCurrentOffset = root.dataPageMaxResults * (root.dataPageTotal - 1)
+    do dataLoadTable
+
+dataPageButton = ->
+    root.dataCurrentOffset = ($ this).attr "offset"
+    do dataLoadTable
+
+dataDeleteRecords = ->
+    #Get a list of checked IDs
+    checkedIDs = []
+    ($ ".data_tableCheck:checked").each ->
+        checkedIDs.push ($ this).data("id")
+    
+    #If nothing's checked, just return
+    return if checkedIDs.length is 0
+    
+    #Start the request
+    request = apiCall "/api/#{root.dataCurrentModel}_remove",
+        "token": session
+        "ids": checkedIDs
+    
+    #On success, reload
+    request.done -> do dataLoadTable
 
 #Initialize the console scripting (on ready)
 $ initialize

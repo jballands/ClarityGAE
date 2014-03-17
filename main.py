@@ -248,10 +248,10 @@ class _APIHandler(webapp2.RequestHandler):
             self.session = self.session_from_token(self.token)
 
             if not self.session:
-                return self.error(403.3)
+                return self.error(403.201)
 
             if action in self._restricted and not self.session.user.admin:
-                return self.error(403.4)
+                return self.error(403.202)
 
         function = 'api_' + action
         if hasattr(self, function):
@@ -272,7 +272,8 @@ class _APIHandler(webapp2.RequestHandler):
         logging.warning('ERROR_CODE ' + repr(floatcode))
 
         if floatcode in self._errors:
-            json.dump(self._errors[floatcode], self.response, cls=APIJSONEncoder)
+            #json.dump(self._errors[floatcode], self.response, cls=APIJSONEncoder)
+            self.response.write(self._errors[floatcode])
             logging.warning('ERROR_MESSAGE ' + repr(self._errors[floatcode]))
 
     def respond_json(self, data):

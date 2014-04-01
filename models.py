@@ -97,6 +97,21 @@ class Ticket(db.Model):
     
     loan_status = db.IntegerProperty(required=False, default=0)
     loan_amount = db.IntegerProperty(required=False, default=0)
+    
+    services = [
+        'left_leg',
+        'right_leg',
+        'left_shin',
+        'right_shin',
+        'left_arm',
+        'right_arm',
+        'sewing_machine',
+        'crutches',
+        'tricycle',
+        'tea_stand',
+        'wheelchair',
+        'loan_status'
+    ]
 
     #Activity log (wip)
 '''

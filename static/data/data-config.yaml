@@ -132,12 +132,12 @@ properties:
         inCreate: false
         required: false
 
-    -   name: headshot
-        type: headshot
-        inTable: true
-        inDetail: false
-        inCreate: false
-        required: false
+    #-   name: headshot
+    #    type: headshot
+    #    inTable: true
+    #    inDetail: false
+    #    inCreate: false
+    #    required: false
 
     -   name: name_prefix
         type: select

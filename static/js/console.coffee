@@ -4,6 +4,7 @@ root = this
 root.dataConfig = {}
 
 root.dataCurrentModel = ''
+root.dataCurrentID = ''
 root.dataCurrentQuery = {}
 root.dataCurrentOffset = 0
 
@@ -16,8 +17,12 @@ root.dataPageMaxResults = 16
 initialize = ->
     #Bind the buttons
     ($ "#data_buttonDeleteRecord").click dataDeleteRecords
-    ($ "#data_buttonCreateRecord")
+    ($ "#data_buttonCreateRecord").click dataCreateRecord
+    ($ "#data_buttonCreateRecordSubmit").click dataCreateSubmitRecord
     ($ "#data_buttonRefresh").click -> do dataLoadTable
+    
+    #Modal buttons that are model-specific
+    ($ "#data_modalTicketClose").click dataModalTicketClose
     
     #Bind some events
     ($ '#data_modalDetail').on "hidden.bs.modal", -> do dataLoadTable
@@ -25,12 +30,12 @@ initialize = ->
     
     #Disable any stragglers
     $('.load-disable').prop 'disabled', true
-    (apiCall '/static/data/data-config.json', {}, false, "GET").done (data) ->
+    (apiCall '/static/data/data-config.json', {}, true, "GET").done (data) ->
         root.dataConfig = data
         do dataInitButtons
 
 #Api call method for stadardizing api calls :D
-apiCall = (url, data={}, lazy=false, method='POST') ->
+apiCall = (url, data={}, lazy=false, method='POST', context=document.body) ->
     if not lazy
         #Disable elements that are marked to be
         $('.load-disable').prop 'disabled', true
@@ -44,11 +49,12 @@ apiCall = (url, data={}, lazy=false, method='POST') ->
         'type': method
         'contentType': 'application/json; charset=utf-8'
         'dataType': 'json'
+        'context': context
         'data': JSON.stringify data
         'error': (xhr, status, error) ->
-            if not lazy
-                try
-                    message = xhr.responseText or error
+            if not lazy and xhr and error
+                message = xhr.responseText or error
+                if message is not null and message is not undefined
                     bootbox.alert message
         'complete': ->
             if not lazy
@@ -188,14 +194,14 @@ dataMakeTableView = (property, instance, cell) ->
     name = property["name"]
     value = instance[name]
     
+    #If boolean, set value to stringified boolean
+    if typeof value is "boolean"
+        value = JSON.stringify value
+    
     #If empty, just make the table say empty :P
     if not value
         cell.append "<em>Empty</em>"
         return
-    
-    #If boolean, convert to string
-    if value is true or false
-        value = JSON.stringify value
     
     #Switch based on property name (for specialized types)
     switch property["type"]
@@ -245,13 +251,14 @@ dataMakeTableView = (property, instance, cell) ->
             button = ($ "<button class='btn btn-sm btn-success'><span class='glyphicon glyphicon-qrcode'></span></button>").appendTo cell
             button.data "data", value
             button.click ->
+                button = ($ this)
                 markup = "<div class='text-center'><h2>View QR Code</h2><hr><img class='qrcode'></div>"
                 bootbox.alert(markup)
                 setTimeout ->
                     qr.image
-                        "image": ($ "img.qrcode").get 0,
-                        "value": ($ this).attr "data",
-                        "size": 50
+                        "image": ($ "img.qrcode").get 0
+                        "value": button.data "data"
+                        "size": 100
                 , 200
             return
     
@@ -262,6 +269,8 @@ dataDetailRecord = (model, modelID) ->
     #Clear the modal's contents
     ($ '#data_modalDetailTable').children().each ->
         do ($ this).remove
+    
+    root.dataCurrentID = modelID
     
     #Create a non-lazy loader for loading the instance
     request = apiCall "/api/#{model}_get",
@@ -285,6 +294,12 @@ dataDetailRecord = (model, modelID) ->
             cell = ($ "<td></td>").appendTo row
             dataMakeDetailView model, prop, data, cell
         
+        #Hide all model-specific wells
+        do ($ ".data_modalDetailWell").hide
+        
+        #Show the specific one we want (if it exists)
+        do ($ ".data_modalDetailWell[model=#{model}]").show
+        
         #Show the modal
         ($ '#data_modalDetail').modal 'show'
             
@@ -294,7 +309,13 @@ dataDetailRecord = (model, modelID) ->
 dataMakeDetailView = (model, property, instance, cell, empty = false) ->
     name = property["name"]
     type = property["type"]
-    value = instance[name]
+    
+    if empty
+        instanceID = null
+        value = null
+    else
+        instanceID = instance["id"]
+        value = instance[name]
     
     if typeof(value) is 'boolean'
         value = JSON.stringify value
@@ -306,7 +327,7 @@ dataMakeDetailView = (model, property, instance, cell, empty = false) ->
         "name": name
         "type": type
         "url": url
-        "pk": instance["id"]
+        "pk": instanceID
         "value": value
         "token": session
     
@@ -354,7 +375,7 @@ dataMakeDetailView = (model, property, instance, cell, empty = false) ->
             for linkedID in value
                 #Create the button
                 button = ($ "<button class='btn btn-success btn-xs btn-block' disabled>. . .</button>").appendTo cell
-                cell.append "<br>"
+                #cell.append "<br>"
                 button.data "model", property["model"]
                 button.data "id", linkedID
                 button.click ->
@@ -364,21 +385,26 @@ dataMakeDetailView = (model, property, instance, cell, empty = false) ->
                 request = apiCall "/api/#{property['model']}_get",
                     "token": session
                     "id": linkedID,
-                    true
+                    true,
+                    'POST',
+                    button
                 
                 #Re-enable the button if the request succeeds
-                request.done -> button.prop "disabled", false
-                
-                #Switch for the model type to determine the button's text
-                switch property["model"]
-                    when "ticket"
-                        request.done (data) -> button.text "Opened: #{data['opened']}"
-                        break
+                request.done (data) ->
+                    ($ this).prop "disabled", false
+
+                    #Switch for the model type to determine the button's text
+                    switch ($ this).data "model"
+                        when "ticket"
+                            ($ this).text "Opened: #{data['opened']}"
+                            break
                 
             return
         
         when "qrcode"
-            return dataMakeTableView property, instance, cell
+            if not empty
+                return dataMakeTableView property, instance, cell
+            options["type"] = "text"
                 
     
     #Initialize the x-editable
@@ -415,7 +441,69 @@ dataDeleteRecords = ->
         "ids": checkedIDs
     
     #On success, reload
-    request.done -> do dataLoadTable
+    request.always -> do dataLoadTable
 
+dataCreateRecord = ->
+    table = ($ "#data_modalCreateRecordTable")
+    
+    #Clear the modal's contents
+    table.children().each ->
+        do ($ this).remove
+    
+    #Create a quick reference to the current model
+    model = root.dataCurrentModel
+    
+    #Load the model properties
+    properties = root.dataConfig["properties"][model]
+    
+    #Iterate over and put them in the modal
+    for prop in properties
+        continue if not prop["inCreate"]
+        row = ($ "<tr></tr>").appendTo table
+        
+        #If required, make it bold
+        if prop["required"]
+            ($ "<td><strong>#{prop['name']}</strong></td>").appendTo row
+        else
+            ($ "<td>#{prop['name']}</td>").appendTo row
+        
+        cell = ($ "<td></td>").appendTo row
+        cell.data "name", prop["name"]
+        dataMakeDetailView model, prop, null, cell, true
+    
+    #Show the modal
+    ($ "#data_modalCreateRecord").modal "show"
+
+dataCreateSubmitRecord = ->
+    #Get all x-editable elements in the modal table
+    editables = ($ "#data_modalCreateRecord").find ".editable"
+    
+    #Empty hash for storing data
+    data = {}
+    
+    #Iterate through each editable and dump its info into the hash
+    for editable in editables
+        #name = ($ editable).parent().data "name"
+        value = ($ editable).editable "getValue"
+        #data[name] = value
+        data = $.extend {}, data, value
+    
+    data["token"] = session
+    
+    #Make the call
+    ($ "#data_buttonCreateRecordSubmit").prop "disabled", true
+    request = apiCall "/api/#{root.dataCurrentModel}_create", data
+    request.done ->
+        ($ "#data_modalCreateRecord").modal "hide"
+        ($ "#data_buttonCreateRecordSubmit").prop "disabled", false
+    
+dataModalTicketClose = ->
+    request = apiCall "/api/ticket_close",
+        "token": session
+        "id": root.dataCurrentID,
+        true
+    request.always ->
+        ($ '#data_modalDetail').modal 'hide'
+    
 #Initialize the console scripting (on ready)
 $ initialize

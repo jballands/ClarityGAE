@@ -245,7 +245,11 @@ class _APIHandler(webapp2.RequestHandler):
         logging.info('REQUEST_TOKEN ' + repr(self.token))
         
         #Verify the arguments
-        self.verify_args()
+        self.args_verify()
+        
+        #Post processing option because x-editable never makes it easy
+        if self.args.get('postprocess', False):
+            self.args_postprocess()
 
         #Log the arguments to assist with error debugging
         logging.info('REQUEST_ARGS ' + repr(self.args))
@@ -285,7 +289,7 @@ class _APIHandler(webapp2.RequestHandler):
     def respond_json(self, data):
         json.dump(data, self.response, cls=APIJSONEncoder, skipkeys=True)
     
-    def verify_args(self):
+    def args_verify(self):
         for key in self.args:
             value = self.args[key]
             
@@ -354,19 +358,32 @@ class _APIHandler(webapp2.RequestHandler):
 
 class _APIModelHandler(_APIHandler):
     _model = object
+    
+    def args_postprocess(self):
+        #X-Editable doesn't have types, only strings, so this intelligently casts them
+        for key in self.args:
+            try:
+                if isinstance(self._model.properties()[key], db.IntegerProperty):
+                    self.args[key] = int(self.args[key])
+                elif isinstance(self._model.properties()[key], db.BooleanProperty):
+                    value = self.args[key]
+                    if not isinstance(value, bool):
+                        self.args[key] = True if value == 'true' else False
+            except KeyError: pass
 
     def _get_instances(self, throw_errors=True):
         #If the singular ID argument is specified, return dat
         if 'id' in self.args:
             instance_key =  self.args.get('id')
 
-            #Do a try catch on retrieving the instance
+            #Do a cheap instance get. If there are errors, instance will stay none.
+            instance = None
             try:
                 instance = self._model.get(instance_key)
+            except: pass
 
-            #Catch the typical Model.get errors, but only toss them into the HTTP well if told to
-            except db.BadKeyError: return self.error(404.1) if throw_errors else None
-            except db.KindError: return self.error(401.2) if throw_errors else None
+            #If the instance actually doesn't exist, erorrrrrrrrrr
+            if not instance: return self.error(404.100) if throw_errors else None
 
             #If you've made it this far, return the fruits of your labor
             return instance
@@ -380,11 +397,41 @@ class _APIModelHandler(_APIHandler):
 
         #Wow you really fucked up if it got this far
         return None
+    
+    def get_instances(self, throw_errors=True):
+        #If the singular ID argument is specified, return dat
+        instances = []
+        if 'id' in self.args:
+            instance_key =  self.args.pop('id')
+
+            #Do a cheap instance get. If there are errors, instance will stay none.
+            instance = None
+            try:
+                instance = self._model.get(instance_key)
+            except: pass
+
+            #If the instance actually doesn't exist, erorrrrrrrrrr
+            if not instance: return self.error(404.100) if throw_errors else None
+
+            #If you've made it this far, return the fruits of your labor
+            instances.append(instance)
+
+        #If a list of IDs is give, do dat
+        if 'ids' in self.args:
+            keylist = self.args.pop('ids')
+
+            #Return those results. THANK YOU GOOGLE FOR MAKING THIS EASY!
+            instances = db.get(keylist)
+
+        #Return dat shit (or None)
+        self.instances = instances
+        return instances
 
     def api_create(self):
         properties = self._model.properties()
         valid = properties.keys()
         fields = {}
+        self.args_postprocess()
         #args = self.request.arguments()
         args = self.args.keys()
         for arg in args:
@@ -417,6 +464,7 @@ class _APIModelHandler(_APIHandler):
 
     def api_get(self):
         #Use that shiny new builtin method and the shiny new return system
+        #instances = self.get_instances()
         return self._get_instances()
 
     def api_query(self):
@@ -455,29 +503,23 @@ class _APIModelHandler(_APIHandler):
             db.delete(given)
 
     def api_update(self):
+        #Get the ID, turn it into an instance, and deal with any errors
+        instances = self.get_instances()
+        
         #Retrieve request arguments
         arguments = self.args
-
+        
         #Retrieve valid model properties
         valid_properties = self._model.properties().keys()
 
-        #Get the ID, turn it into an instance, and deal with any errors
-        instance_key = arguments.pop('id', '')
-        if not instance_key: return self.error(401.1)
-        try:
-            instance = self._model.get(instance_key)
-        except db.BadKeyError:
-            return self.error(404.1)
-        except db.KindError:
-            return self.error(404.2)
-
         #Iterate through given arguments and update the instance
-        for key in arguments:
-            if not key in valid_properties: return self.error(401.2)
-            setattr(instance, key, arguments[key])
-
-        #Finish the transaction
-        instance.put()
+        for instance in instances:
+            for key in arguments:
+                if not key in valid_properties: return self.error(401.2)
+                setattr(instance, key, arguments[key])
+            
+            #Save the updates
+            instance.put()
 
     def api_consoleupdate(self):
         oldargs = self.args
@@ -485,14 +527,16 @@ class _APIModelHandler(_APIHandler):
         name = oldargs['name']
         value = oldargs['value']
         
-        if isinstance(self._model.properties()[name], db.IntegerProperty):
-            value = int(value)
+        #if isinstance(self._model.properties()[name], db.IntegerProperty):
+        #    value = int(value)
         
         self.args = {
             'id': oldargs['pk'],
             name: value
         }
-        self.verify_args()
+        
+        self.args_postprocess()
+        self.args_verify()
         return self.api_update()
 
 class APISessionHandler(_APIHandler):
@@ -584,6 +628,30 @@ class APITicketHandler(_APIModelHandler):
     def api_create(self):
         if models.Ticket.all().filter('qrcode =', self.args['qrcode']).get(): return self.error(400.106)
         _APIModelHandler.api_create(self)
+    
+    def api_close(self):
+        instances = self._get_instances()
+        if not isinstance(instances, (list, tuple)):
+            instances = [instances, ]
+        
+        for ticket in instances:
+            if not ticket.closed:
+                ticket.closed = datetime.datetime.utcnow()
+                ticket.put()
+    
+    def api_update(self):
+        _APIModelHandler.api_update(self)
+        for instance in self.instances:
+            if not instance.closed:
+                closing = True
+                for service in instance.services:
+                    value = getattr(instance, service)
+                    if value == 1:
+                        closing = False
+                        break
+                if closing:
+                    instance.closed = datetime.datetime.utcnow()
+                    instance.put()
 
 class APIAPPHandler(_APIHandler):
     def api_tickets_by_ticket(self):

@@ -2,6 +2,7 @@
     <head>
         <title>Clarity Database Gateway</title>
         {% include '_header.html' %}
+        <script src="/static/js/login.js"></script>
         {% include '_footer.html' %}
     </head>
     <body>
@@ -52,12 +53,33 @@
             <div class="row">
                 <div class="col-md-6 col-md-offset-3 text-center">
                     <em>
-                        Styled using <a href="http://getbootstrap.com/">Bootstrap 3.1.0</a>, <a href="http://bootswatch.com/cosmo/">Cosmo</a>, and <a href="http://subtlepatterns.com/">Subtle Patterns</a>.
+                        Styled using <a href="http://getbootstrap.com/">Bootstrap 3.1.0</a>, <a href="http://bootswatch.com/cosmo/">Cosmo</a>, and <a href="http://subtlepatterns.com/">Subtle Patterns</a>.<br>
+                        View this <a href="http://jonathanballands.me/">project's home</a>, the <a href="https://github.com/jballands/ClarityGAE">server on GitHub</a>, or the <a href="https://github.com/jballands/ClarityAndroid">app on GitHub</a>.
                     </em>
                 </div>
             </div>
 
         </div>
+        
+        <div id="loader" hidden>
+            <div class="loader"></div>
+        </div>
+        
+        <style>
+            #loader {
+                width: 160px;
+                height: 160px;
+                padding: 16px;
+                position:fixed;
+                top:50%;
+                left:50%;
+                margin-top:-90px;
+                margin-left:-90px;
+                
+                background-color: #ddd;
+                border-radius: 5px;
+            }
+        </style>
 
         <script type="text/javascript">
             var session = '';

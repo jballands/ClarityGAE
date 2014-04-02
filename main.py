@@ -539,7 +539,8 @@ class _APIModelHandler(_APIHandler):
         self.args_verify()
         return self.api_update()
 
-class APISessionHandler(_APIHandler):
+class APISessionHandler(_APIModelHandler):
+    _model = models.Session
     _secure = False
 
     def api_begin(self):
@@ -549,12 +550,12 @@ class APISessionHandler(_APIHandler):
 
         user = models.Provider.all().filter('username =', username).get()
         if not user:
-            self.error(403.1)
+            self.error(403.101)
             return
 
         password_hash = hashlib.md5(password).hexdigest()
         if not password_hash == user.password:
-            self.error(403.2)
+            self.error(403.102)
             return
 
         session = models.Session(

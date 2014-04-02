@@ -16,6 +16,7 @@ root.dataPageMaxResults = 16
 
 initialize = ->
     #Bind the buttons
+    ($ "#consoleLogout").click consoleLogout
     ($ "#data_buttonDeleteRecord").click dataDeleteRecords
     ($ "#data_buttonCreateRecord").click dataCreateRecord
     ($ "#data_buttonCreateRecordSubmit").click dataCreateSubmitRecord
@@ -33,6 +34,10 @@ initialize = ->
     (apiCall '/static/data/data-config.json', {}, true, "GET").done (data) ->
         root.dataConfig = data
         do dataInitButtons
+
+consoleLogout = ->
+    $.cookies.del "clarity-console-session"
+    window.location = "/"
 
 #Api call method for stadardizing api calls :D
 apiCall = (url, data={}, lazy=false, method='POST', context=document.body) ->

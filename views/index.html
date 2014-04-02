@@ -16,37 +16,54 @@
             <img src="/static/image/ClarityLogo_padded_white.svg" id="claritylogo">
         </div>
 
-        <div class="container-fluid" id="logindiv">
+        <div class="container-fluid" id="container">
 
             <br>
-            <form id="loginform">
+            
+            <div id="div_login" hidden>
+                <form id="form_login">
 
-                <div class="row">
-                    <div class="col-md-10 col-md-offset-1">
-                        <h2>Log in to the console</h2>
+                    <div class="row">
+                        <div class="col-md-10 col-md-offset-1">
+                            <h2>Log in to the console</h2>
+                        </div>
                     </div>
-                </div>
 
-                <div class="row">
-                    <div class="col-md-10 col-md-offset-1">
-                        <input type="text" class="form-control" placeholder="Username" name="username" autofocus required>
+                    <div class="row">
+                        <div class="col-md-10 col-md-offset-1">
+                            <input type="text" class="form-control load-disable" placeholder="Username" name="username" autofocus required>
+                        </div>
                     </div>
-                </div>
 
-                <div class="row">
-                    <div class="col-md-10 col-md-offset-1">
-                        <input type="password" class="form-control" placeholder="Password" name="password" required>
+                    <div class="row">
+                        <div class="col-md-10 col-md-offset-1">
+                            <input type="password" class="form-control load-disable" placeholder="Password" name="password" required>
+                        </div>
                     </div>
-                </div>
 
+                    <br>
+
+                    <div class="row">
+                        <div class="col-md-10 col-md-offset-1">
+                            <button class="btn btn-lg btn-primary btn-block load-disable" type="submit">Submit</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <div id="div_continue" hidden>
+                <h1 class="text-center" id="text_continue"></h1>
                 <br>
 
                 <div class="row">
-                    <div class="col-md-10 col-md-offset-1">
-                        <button class="btn btn-lg btn-primary btn-block" type="submit">Submit</button>
+                    <div class="col-md-4 col-md-offset-2">
+                        <button class="btn btn-lg btn-primary btn-block" id="button_continue">Continue</button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-lg btn-primary btn-block" id="button_switch" disabled>Not you?</button>
                     </div>
                 </div>
-            </form>
+            </div>
 
             <br><br><br>
 
@@ -70,11 +87,11 @@
                 width: 160px;
                 height: 160px;
                 padding: 16px;
-                position:fixed;
-                top:50%;
-                left:50%;
-                margin-top:-90px;
-                margin-left:-90px;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                margin-top: -90px;
+                margin-left: -90px;
                 
                 background-color: #ddd;
                 border-radius: 5px;
@@ -82,6 +99,7 @@
         </style>
 
         <script type="text/javascript">
+            /*
             var session = '';
 
             var titlebarContracted = '50px';
@@ -141,7 +159,7 @@
 
             $(document).ready(function() {
                 $('#claritylogobar').css('height', titlebarExpanded)
-            });
+            });*/
         </script>
 
         <!--

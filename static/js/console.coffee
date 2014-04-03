@@ -22,12 +22,19 @@ initialize = ->
     ($ "#data_buttonCreateRecordSubmit").click dataCreateSubmitRecord
     ($ "#data_buttonRefresh").click -> do dataLoadTable
     
+    #Bind the filter shit
+    ($ "#data_filterSelect").change dataFilterChange
+    
     #Modal buttons that are model-specific
     ($ "#data_modalTicketClose").click dataModalTicketClose
     
     #Bind some events
     ($ '#data_modalDetail').on "hidden.bs.modal", -> do dataLoadTable
     ($ '#data_modalCreateRecord').on "hidden.bs.modal", -> do dataLoadTable
+    
+    #Hide filter entry fields
+    do ($ "#data_filterText").hide
+    do ($ "#data_filterValue").hide
     
     #Disable any stragglers
     $('.load-disable').prop 'disabled', true
@@ -185,12 +192,15 @@ dataParseTable = (data) ->
         link_forward = ($ '<li><a href="#">&raquo;</a></li>').appendTo container
         link_forward.click dataPageForward
 
-    #Remove all the filter fields from the selection dropdown
+    #Remove all the filter fields from the selection dropdown and hide the entry fields
     do ($ '#data_filterSelect>option:enabled').remove
+    do ($ "#data_filterText").hide
+    do ($ "#data_filterValue").hide
 
     #Insert filter options for the current model
     selector = $ '#data_filterSelect'
     for property in modelProps
+        continue if not property["inFilter"]
         option = ($ '<option></option>').appendTo selector
         option.val property['name']
         option.text property['name']
@@ -509,6 +519,39 @@ dataModalTicketClose = ->
         true
     request.always ->
         ($ '#data_modalDetail').modal 'hide'
+
+dataFilterChange = ->
+    #Get the name of the selected property
+    name = do ($ this).val
+    
+    #If the property is a select type, show the select thingy, hide the text thingy, and insert thingies
+    select = false
+    property = null
+    for obj in root.dataConfig["properties"][root.dataCurrentModel]
+        if obj["name"] is name
+            select = obj["type"] is "select"
+            property = obj
+            break
+    
+    if select
+        do ($ "#data_filterValue > option:enabled").remove
+        for option in property["options"]
+            entry = ($ '<option></option>').appendTo ($ "#data_filterValue")
+            entry.val option["value"]
+            entry.text option["text"]
+        do ($ "#data_filterText").hide
+        do ($ "#data_filterValue").show
+        return
+    
+    ($ "#data_filterText").val ""
+    do ($ "#data_filterText").show
+    do ($ "#data_filterValue").hide
+
+dataFilterAdd = (name, value) ->
+    return
+
+dataFilterRemove = (name) ->
+    return
     
 #Initialize the console scripting (on ready)
 $ initialize

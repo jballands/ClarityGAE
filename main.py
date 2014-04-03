@@ -194,16 +194,16 @@ class APIJSONEncoder(json.JSONEncoder):
             except TypeError:
                 return 'CANNOT_SERIALIZE'
 
-class APIJSONDecoder(json.JSONDecoder):
-    def decode(self, obj):
-        logging.info('DECODING ' + repr(obj))
-        result = None
-        try:
-            result = datetime.datetime.strptime(obj, date_format).date()
-            result = datetime.datetime.strptime(obj, datetime_format)
-        except ValueError: pass
-        if result: return result
-        return super(APIJSONDecoder, self).decode(obj)
+#class APIJSONDecoder(json.JSONDecoder):
+#    def decode(self, obj):
+#        logging.info('DECODING ' + repr(obj))
+#        result = None
+#        try:
+#            result = datetime.datetime.strptime(obj, date_format).date()
+#            result = datetime.datetime.strptime(obj, datetime_format)
+#        except ValueError: pass
+#        if result: return result
+#        return super(APIJSONDecoder, self).decode(obj)
 
 class _APIHandler(webapp2.RequestHandler):
     _errors = {}
@@ -224,11 +224,11 @@ class _APIHandler(webapp2.RequestHandler):
             logging.info('REQUEST_JSON_BODY ' + repr(self.request.body))
             try:
                 self.args = json.load(self.request.body_file)
-                for key in self.args:
-                    if key in models.date_properties:
-                        self.args[key] = datetime.datetime.strptime(self.args[key], date_format).date()
-                    elif key in models.datetime_properties:
-                        self.args[key] = datetime.datetime.strptime(self.args[key], datetime_format)
+                #for key in self.args:
+                #    if key in models.date_properties:
+                #        self.args[key] = datetime.datetime.strptime(self.args[key], date_format).date()
+                #    elif key in models.datetime_properties:
+                #        self.args[key] = datetime.datetime.strptime(self.args[key], datetime_format)
             except ValueError:
                 if self.request.body:
                     logging.info('REQUEST_JSON_INVALID')
@@ -248,8 +248,8 @@ class _APIHandler(webapp2.RequestHandler):
         self.args_verify()
         
         #Post processing option because x-editable never makes it easy
-        if self.args.get('postprocess', False):
-            self.args_postprocess()
+        #if self.args.get('postprocess', False):
+        #    self.args_postprocess()
 
         #Log the arguments to assist with error debugging
         logging.info('REQUEST_ARGS ' + repr(self.args))
@@ -359,16 +359,34 @@ class _APIHandler(webapp2.RequestHandler):
 class _APIModelHandler(_APIHandler):
     _model = object
     
+    format_datetime = '%Y-%m-%d %H:%M:%S'
+    format_date = '%Y-%m-%d'
+    
+    def args_verify(self):
+        _APIHandler.args_verify(self)
+        self.args_postprocess()
+    
     def args_postprocess(self):
         #X-Editable doesn't have types, only strings, so this intelligently casts them
         for key in self.args:
             try:
-                if isinstance(self._model.properties()[key], db.IntegerProperty):
+                prop = self._model.properties()[key]
+                value = self.args[key]
+                logging.info('BEFORE ' + key + ' ' + repr(value))
+                
+                if isinstance(prop, db.IntegerProperty):
                     self.args[key] = int(self.args[key])
-                elif isinstance(self._model.properties()[key], db.BooleanProperty):
+                elif isinstance(prop, db.BooleanProperty):
                     value = self.args[key]
                     if not isinstance(value, bool):
                         self.args[key] = True if value == 'true' else False
+                elif isinstance(prop, db.DateProperty):
+                    value = datetime.datetime.strptime(value, self.format_date).date()
+                elif isinstance(prop, db.DateTimeProperty):
+                    value = datetime.datetime.strptime(value, self.format_datetime)
+                
+                logging.info('AFTER ' + repr(value))
+                self.args[key] = value
             except KeyError: pass
 
     def _get_instances(self, throw_errors=True):
@@ -431,7 +449,7 @@ class _APIModelHandler(_APIHandler):
         properties = self._model.properties()
         valid = properties.keys()
         fields = {}
-        self.args_postprocess()
+        #self.args_postprocess()
         #args = self.request.arguments()
         args = self.args.keys()
         for arg in args:
@@ -535,7 +553,7 @@ class _APIModelHandler(_APIHandler):
             name: value
         }
         
-        self.args_postprocess()
+        #self.args_postprocess()
         self.args_verify()
         return self.api_update()
 

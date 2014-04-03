@@ -28,8 +28,8 @@ nameSuffixes: &suffixes
     - {value: Esq., text: Esq.}
 
 truefalse: &truefalse
-    - {value: !!str true, text: !!str true}
-    - {value: !!str false, text: !!str false}
+    - {value: !!str true, text: Yes}
+    - {value: !!str false, text: No}
 
 sexes: &sexes
     - {value: male, text: male}
@@ -62,6 +62,7 @@ properties:
         inTable: false
         inDetail: true
         inCreate: true
+        inFilter: true
         required: false
         options: *prefixes
 
@@ -70,6 +71,7 @@ properties:
         inTable: true
         inDetail: true
         inCreate: true
+        inFilter: true
         required: true
 
     -   name: name_middle
@@ -77,6 +79,7 @@ properties:
         inTable: false
         inDetail: true
         inCreate: true
+        inFilter: true
         required: false
 
     -   name: name_last
@@ -84,6 +87,7 @@ properties:
         inTable: true
         inDetail: true
         inCreate: true
+        inFilter: true
         required: true
 
     -   name: name_suffix
@@ -91,6 +95,7 @@ properties:
         inTable: false
         inDetail: true
         inCreate: true
+        inFilter: true
         required: false
         options: *suffixes
 
@@ -106,6 +111,7 @@ properties:
         inTable: true
         inDetail: true
         inCreate: true
+        inFilter: true
         required: true
         options: *sexes
 
@@ -144,6 +150,7 @@ properties:
         inTable: false
         inDetail: true
         inCreate: true
+        inFilter: true
         required: false
         options: *prefixes
 
@@ -152,6 +159,7 @@ properties:
         inTable: true
         inDetail: true
         inCreate: true
+        inFilter: true
         required: true
 
     -   name: name_middle
@@ -159,6 +167,7 @@ properties:
         inTable: false
         inDetail: true
         inCreate: true
+        inFilter: true
         required: false
 
     -   name: name_last
@@ -166,6 +175,7 @@ properties:
         inTable: true
         inDetail: true
         inCreate: true
+        inFilter: true
         required: true
 
     -   name: name_suffix
@@ -173,6 +183,7 @@ properties:
         inTable: false
         inDetail: true
         inCreate: true
+        inFilter: true
         required: false
         options: *suffixes
 
@@ -195,6 +206,7 @@ properties:
         inTable: true
         inDetail: true
         inCreate: true
+        inFilter: true
         required: true
         options: *truefalse
 
@@ -235,16 +247,16 @@ properties:
         inCreate: false
         required: false
     
-    -   {name: left_leg, type: select, inDetail: true, inCreate: true, options: *statuses}
-    -   {name: right_leg, type: select, inDetail: true, inCreate: true, options: *statuses}
-    -   {name: left_shin, type: select, inDetail: true, inCreate: true, options: *statuses}
-    -   {name: right_shin, type: select, inDetail: true, inCreate: true, options: *statuses}
-    -   {name: left_arm, type: select, inDetail: true, inCreate: true, options: *statuses}
-    -   {name: right_arm, type: select, inDetail: true, inCreate: true, options: *statuses}
-    -   {name: sewing_machine, type: select, inDetail: true, inCreate: true, options: *statuses}
-    -   {name: crutches, type: select, inDetail: true, inCreate: true, options: *statuses}
-    -   {name: tricycle, type: select, inDetail: true, inCreate: true, options: *statuses}
-    -   {name: tea_stand, type: select, inDetail: true, inCreate: true, options: *statuses}
-    -   {name: wheelchair, type: select, inDetail: true, inCreate: true, options: *statuses}
-    -   {name: loan_status, type: select, inDetail: true, inCreate: true, options: *statuses}
+    -   {name: left_leg, type: select, inDetail: true, inCreate: true, inFilter: true, options: *statuses}
+    -   {name: right_leg, type: select, inDetail: true, inCreate: true, inFilter: true, options: *statuses}
+    -   {name: left_shin, type: select, inDetail: true, inCreate: true, inFilter: true, options: *statuses}
+    -   {name: right_shin, type: select, inDetail: true, inCreate: true, inFilter: true, options: *statuses}
+    -   {name: left_arm, type: select, inDetail: true, inCreate: true, inFilter: true, options: *statuses}
+    -   {name: right_arm, type: select, inDetail: true, inCreate: true, inFilter: true, options: *statuses}
+    -   {name: sewing_machine, type: select, inDetail: true, inCreate: true, inFilter: true, options: *statuses}
+    -   {name: crutches, type: select, inDetail: true, inCreate: true, inFilter: true, options: *statuses}
+    -   {name: tricycle, type: select, inDetail: true, inCreate: true, inFilter: true, options: *statuses}
+    -   {name: tea_stand, type: select, inDetail: true, inCreate: true, inFilter: true, options: *statuses}
+    -   {name: wheelchair, type: select, inDetail: true, inCreate: true, inFilter: true, options: *statuses}
+    -   {name: loan_status, type: select, inDetail: true, inCreate: true, inFilter: true, options: *statuses}
     -   {name: loan_amount, type: text, inDetail: true, inCreate: true}

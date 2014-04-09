@@ -28,12 +28,12 @@ nameSuffixes: &suffixes
     - {value: Esq., text: Esq.}
 
 truefalse: &truefalse
-    - {value: !!str true, text: Yes}
-    - {value: !!str false, text: No}
+    - {value: "true", text: "Yes"}
+    - {value: "false", text: "No"}
 
 sexes: &sexes
-    - {value: male, text: male}
-    - {value: female, text: female}
+    - {value: male, text: Male}
+    - {value: female, text: Female}
 
 statuses: &statuses
     - {value: 0, text: Not Approved}

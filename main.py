@@ -375,11 +375,10 @@ class _APIModelHandler(_APIHandler):
                 logging.info('BEFORE ' + key + ' ' + repr(value))
                 
                 if isinstance(prop, db.IntegerProperty):
-                    self.args[key] = int(self.args[key])
+                    value = int(value)
                 elif isinstance(prop, db.BooleanProperty):
-                    value = self.args[key]
                     if not isinstance(value, bool):
-                        self.args[key] = True if value == 'true' else False
+                        value = True if value == 'true' else False
                 elif isinstance(prop, db.DateProperty):
                     value = datetime.datetime.strptime(value, self.format_date).date()
                 elif isinstance(prop, db.DateTimeProperty):
@@ -498,18 +497,22 @@ class _APIModelHandler(_APIHandler):
             if not arg in valid:
                 self.error(401)
                 return
-            query = query.filter(arg + ' =', self.request.get(arg, ''))
+            query = query.filter(arg + ' =', args[arg])
+            logging.info('QUERY_BY {0}={1}'.format(arg, args[arg]))
         
         if hasattr(self._model, '_order'):
             query = query.order(self._model._order)
 
-        data = {
-            'count': query.count(),
-            'results': query.fetch(
-                limit = runlimit,
-                offset = runoffset
-            )
-        }
+        try:
+            data = {
+                'count': query.count(),
+                'results': query.fetch(
+                    limit = runlimit,
+                    offset = runoffset
+                )
+            }
+        except db.NeedIndexError:
+            return self.error(500.201)
 
         json.dump(data, self.response, skipkeys=True, cls=APIJSONEncoder)
 

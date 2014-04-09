@@ -41,3 +41,12 @@
 
 # 404.2xx Specific 404 errors
 404.201: Scanned ticket not found in database
+
+################################################################
+## 500 Error Definitions: # Use for internal server errors
+500: Interal server error; contact an administrator
+
+# 500.1xx General 500 errors
+
+# 500.2xx Specific 500 errors
+500.201: The database is building an index for your query; please wait a few seconds and try again.

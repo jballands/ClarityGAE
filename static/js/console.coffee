@@ -24,6 +24,7 @@ initialize = ->
     
     #Bind the filter shit
     ($ "#data_filterSelect").change dataFilterChange
+    ($ "#data_buttonFilter").click -> do dataFilterAdd
     
     #Modal buttons that are model-specific
     ($ "#data_modalTicketClose").click dataModalTicketClose
@@ -95,6 +96,11 @@ dataLoadTable = (model = root.dataCurrentModel, query = root.dataCurrentQuery, o
     do ($ '#data_tableBody').children().remove
     do ($ "#data_pagination").children().remove
     
+    #If the model changes, clear filters
+    if model is not root.dataCurrentModel
+        root.dataFilters = {}
+        do ($ "data_filterList").children().remove
+    
     #Set it again, so the parser can see changes
     root.dataCurrentModel = model
     
@@ -106,6 +112,9 @@ dataLoadTable = (model = root.dataCurrentModel, query = root.dataCurrentQuery, o
         'token': session
         'offset': offset
         'limit': root.dataPageMaxResults
+    
+    #Add filters
+    data = $.extend data, root.dataFilters
     
     #Put the query arguments into the request data
     for key, value of query
@@ -194,6 +203,7 @@ dataParseTable = (data) ->
 
     #Remove all the filter fields from the selection dropdown and hide the entry fields
     do ($ '#data_filterSelect>option:enabled').remove
+    ($ "#data_filterSelect>option:disabled").attr "selected", true
     do ($ "#data_filterText").hide
     do ($ "#data_filterValue").hide
 
@@ -276,6 +286,14 @@ dataMakeTableView = (property, instance, cell) ->
                         "size": 100
                 , 200
             return
+        
+        when "select"
+            options = property["options"]
+            for option in options
+                if option["value"] == value
+                    value = option["text"]
+                    break
+            break
     
     #If the value doesn't need special attention, just put the raw data in the table
     cell.append value
@@ -547,11 +565,56 @@ dataFilterChange = ->
     do ($ "#data_filterText").show
     do ($ "#data_filterValue").hide
 
-dataFilterAdd = (name, value) ->
-    return
+dataFilterAdd = (given_name = null, given_value = null) ->
+    field = ""
+    value = ""
+    text = ""
+    
+    if not given_name
+        #Get the selected field, if none selected, flash an error message
+        field = do ($ "#data_filterSelect").val
+        return bootbox.alert "You must select a field to filter by." if not field
+
+        #Determine if we're using the select input
+        select = ($ "#data_filterText").is ":hidden"
+
+        #Retrieve the values from whichever entry method is relevant
+        if select
+            value = do ($ "#data_filterValue > option:selected").val
+            text = do ($ "#data_filterValue > option:selected").text
+        else
+            value = do ($ "#data_filterText").val
+            text = value
+
+        #If no value given, throw an error
+        return bootbox.alert "You must enter or select a field value to filter by." if not value
+    
+    else
+        field = given_name
+        value = given_value
+        text = value
+    
+    #Check to see if it's already in the filter list
+    return bootbox.alert "Filter for this field already exists. Please remove it and try again." if root.dataFilters[field]
+    
+    #Put this into the html filter list
+    entry = ($ "<p><strong>#{field}</strong> = <strong>#{text}</strong></p>").appendTo ($ "#data_filterList")
+    entry.attr "id", "data_filter_#{field}"
+    button = ($ "<button class='btn btn-xs btn-danger pull-right'>X</button>").appendTo entry
+    button.data "name", field
+    button.click ->
+        dataFilterRemove ($ this).data("name")
+    
+    #Put this into the js filter list
+    root.dataFilters[field] = value
+    
+    #Reload table
+    do dataLoadTable
 
 dataFilterRemove = (name) ->
-    return
-    
+    delete root.dataFilters[name]
+    do ($ "#data_filter_#{name}").remove
+    do dataLoadTable
+
 #Initialize the console scripting (on ready)
 $ initialize

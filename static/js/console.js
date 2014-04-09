@@ -29,6 +29,9 @@
       return dataLoadTable();
     });
     ($("#data_filterSelect")).change(dataFilterChange);
+    ($("#data_buttonFilter")).click(function() {
+      return dataFilterAdd();
+    });
     ($("#data_modalTicketClose")).click(dataModalTicketClose);
     ($('#data_modalDetail')).on("hidden.bs.modal", function() {
       return dataLoadTable();
@@ -124,6 +127,10 @@
     ($('#data_tableHead')).children().remove();
     ($('#data_tableBody')).children().remove();
     ($("#data_pagination")).children().remove();
+    if (model === !root.dataCurrentModel) {
+      root.dataFilters = {};
+      ($("data_filterList")).children().remove();
+    }
     root.dataCurrentModel = model;
     url = "/api/" + model + "_query";
     data = {
@@ -131,6 +138,7 @@
       'offset': offset,
       'limit': root.dataPageMaxResults
     };
+    data = $.extend(data, root.dataFilters);
     for (key in query) {
       value = query[key];
       data[key] = value;
@@ -201,6 +209,7 @@
       link_forward.click(dataPageForward);
     }
     ($('#data_filterSelect>option:enabled')).remove();
+    ($("#data_filterSelect>option:disabled")).attr("selected", true);
     ($("#data_filterText")).hide();
     ($("#data_filterValue")).hide();
     selector = $('#data_filterSelect');
@@ -218,7 +227,7 @@
   };
 
   dataMakeTableView = function(property, instance, cell) {
-    var button, model, name, request, value;
+    var button, model, name, option, options, request, value, _i, _len;
     name = property["name"];
     value = instance[name];
     if (typeof value === "boolean") {
@@ -282,6 +291,16 @@
           }, 200);
         });
         return;
+      case "select":
+        options = property["options"];
+        for (_i = 0, _len = options.length; _i < _len; _i++) {
+          option = options[_i];
+          if (option["value"] === value) {
+            value = option["text"];
+            break;
+          }
+        }
+        break;
     }
     return cell.append(value);
   };
@@ -534,9 +553,57 @@
     return ($("#data_filterValue")).hide();
   };
 
-  dataFilterAdd = function(name, value) {};
+  dataFilterAdd = function(given_name, given_value) {
+    var button, entry, field, select, text, value;
+    if (given_name == null) {
+      given_name = null;
+    }
+    if (given_value == null) {
+      given_value = null;
+    }
+    field = "";
+    value = "";
+    text = "";
+    if (!given_name) {
+      field = ($("#data_filterSelect")).val();
+      if (!field) {
+        return bootbox.alert("You must select a field to filter by.");
+      }
+      select = ($("#data_filterText")).is(":hidden");
+      if (select) {
+        value = ($("#data_filterValue > option:selected")).val();
+        text = ($("#data_filterValue > option:selected")).text();
+      } else {
+        value = ($("#data_filterText")).val();
+        text = value;
+      }
+      if (!value) {
+        return bootbox.alert("You must enter or select a field value to filter by.");
+      }
+    } else {
+      field = given_name;
+      value = given_value;
+      text = value;
+    }
+    if (root.dataFilters[field]) {
+      return bootbox.alert("Filter for this field already exists. Please remove it and try again.");
+    }
+    entry = ($("<p><strong>" + field + "</strong> = <strong>" + text + "</strong></p>")).appendTo($("#data_filterList"));
+    entry.attr("id", "data_filter_" + field);
+    button = ($("<button class='btn btn-xs btn-danger pull-right'>X</button>")).appendTo(entry);
+    button.data("name", field);
+    button.click(function() {
+      return dataFilterRemove(($(this)).data("name"));
+    });
+    root.dataFilters[field] = value;
+    return dataLoadTable();
+  };
 
-  dataFilterRemove = function(name) {};
+  dataFilterRemove = function(name) {
+    delete root.dataFilters[name];
+    ($("#data_filter_" + name)).remove();
+    return dataLoadTable();
+  };
 
   $(initialize);
 

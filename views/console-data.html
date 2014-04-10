@@ -36,16 +36,32 @@
             </div>
 
             <div class="panel panel-info">
-                <div class="panel-heading"><span class="glyphicon glyphicon-filter"></span> Data Filters</div>
+                <div class="panel-heading"><span class="glyphicon glyphicon-filter"></span> Data Search</div>
                 <div class="panel-body">
-                    <select class="form-control load-disable" id="data_filterSelect">
-                        <option value="" selected disabled>Field</option>
-                    </select>
-                    <input type="text" class="form-control load-disable" id="data_filterText" placeholder="Enter Value">
-                    <select class="form-control load-disable" id="data_filterValue">
-                        <option value="" selected disabled>Select Value</option>
-                    </select>
-                    <button class="btn btn-info btn-block load-disable" id="data_buttonFilter" disabled>Add Filter</button>
+                    <div class="text-center">
+                        <label class="radio-inline">
+                            <input type="radio" class="load-disable" name="data_radioMode" id="data_radioNormal" checked>Normal Mode
+                        </label>
+                        <label class="radio-inline">
+                            <input type="radio" class="load-disable" name="data_radioMode" id="data_radioAdvanced">Advanced Mode
+                        </label>
+                    </div><br>
+                    
+                    <div id="data_divModeNormal">
+                        <select class="form-control load-disable" id="data_filterSelect">
+                            <option value="" selected disabled>Field</option>
+                        </select>
+                        <input type="text" class="form-control load-disable" id="data_filterText" placeholder="Enter Value">
+                        <select class="form-control load-disable" id="data_filterValue">
+                            <option value="" selected disabled>Select Value</option>
+                        </select>
+                        <button class="btn btn-info btn-block load-disable" id="data_buttonFilter" disabled>Add Filter</button>
+                    </div>
+                    
+                    <div id="data_divModeAdvanced" hidden>
+                        <input type="text" class="form-control load-disable" id="data_queryText" placeholder="Enter Search Query">
+                        <button class="btn btn-info btn-block load-disable" id="data_buttonQuery">Search</button>
+                    </div>
                 </div>
                 <div class="panel-footer" id="data_filterList">
                     

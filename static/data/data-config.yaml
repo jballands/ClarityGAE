@@ -206,7 +206,7 @@ properties:
         inTable: true
         inDetail: true
         inCreate: true
-        inFilter: true
+        inFilter: false
         required: true
         options: *truefalse
 

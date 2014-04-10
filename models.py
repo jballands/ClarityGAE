@@ -3,6 +3,7 @@ import datetime
 
 from google.appengine.ext import db
 from google.appengine.api import users
+from google.appengine.api import search 
 from google.appengine.ext import blobstore
 
 date_properties = [
@@ -22,8 +23,23 @@ class Headshot(db.Model):
     binary = db.BlobProperty(required=False)
     mimetype = db.StringProperty(required=False, default='image/jpeg')
 
-class Provider(db.Model):
-    _order = 'name_last'
+class _ClarityModel(db.Model):
+    _order = None
+    _index = None
+    _fields = {}
+    _document = db.StringProperty(required=False)
+
+class Provider(_ClarityModel):
+    _order_search = search.SortExpression(expression="name_last", direction=search.SortExpression.DESCENDING)
+    _order_query = "name_last"
+    _index = 'provider'
+    _fields = {
+        'name_prefix': search.TextField,
+        'name_first': search.TextField,
+        'name_middle': search.TextField,
+        'name_last': search.TextField,
+        'name_suffix': search.TextField,
+    }
     
     #General properties:
     name_prefix = db.StringProperty(required=False)
@@ -44,7 +60,7 @@ class Provider(db.Model):
     datetime_created = db.DateTimeProperty(auto_now_add=True)
     datetime_terminated = db.DateTimeProperty(required=False)
 
-class Session(db.Model):
+class Session(_ClarityModel):
     #token = db.StringProperty(required=False)
     creation = db.DateTimeProperty(auto_now_add=True)
     expiration = db.DateTimeProperty(required=False)
@@ -56,8 +72,20 @@ class Session(db.Model):
         self.closed = True
         self.put()
 
-class Client(db.Model):
-    _order = 'name_last'
+class Client(_ClarityModel):
+    _order_search = search.SortExpression(expression="name_last", direction=search.SortExpression.DESCENDING)
+    _order_query = "name_last"
+    _index = 'client'
+    _fields = {
+        'name_prefix': search.TextField,
+        'name_first': search.TextField,
+        'name_middle': search.TextField,
+        'name_last': search.TextField,
+        'name_suffix': search.TextField,
+        'dateofbirth': search.DateField,
+        'sex': search.AtomField,
+        'location': search.TextField,
+    }
     
     name_prefix = db.StringProperty(required=False)
     name_first = db.StringProperty(required=True)
@@ -70,8 +98,26 @@ class Client(db.Model):
 
     headshot = db.ReferenceProperty(Headshot, required=False)
 
-class Ticket(db.Model):
-    _order = '-opened'
+class Ticket(_ClarityModel):
+    _order_search = search.SortExpression(expression="opened", direction=search.SortExpression.ASCENDING)
+    _order_query = "-opened"
+    _index = 'ticket'
+    _fields = {
+        "left_leg": search.NumberField,
+	    "right_leg": search.NumberField,
+	    "left_shin": search.NumberField,
+	    "right_shin": search.NumberField,
+	    "left_arm": search.NumberField,
+	    "right_arm": search.NumberField,
+
+	    "sewing_machine": search.NumberField,
+	    "crutches": search.NumberField,
+	    "tricycle": search.NumberField,
+	    "tea_stand": search.NumberField,
+	    "wheelchair": search.NumberField,
+	    
+	    "loan_status": search.NumberField,
+    }
     
     #Basic ticket information and reference properties
     qrcode = db.StringProperty(required=False)

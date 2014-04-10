@@ -17,6 +17,7 @@ import yaml
 
 from google.appengine.ext import db
 from google.appengine.api import users
+from google.appengine.api import search
 #from google.appengine.ext import blobstore
 
 import models
@@ -266,7 +267,7 @@ class _APIHandler(webapp2.RequestHandler):
         function = 'api_' + action
         if hasattr(self, function):
             result = getattr(self, function)()
-            if result: self.respond_json(result)
+            if result is not None: self.respond_json(result)
         else:
             self.error(404)
     post = route
@@ -443,6 +444,33 @@ class _APIModelHandler(_APIHandler):
         #Return dat shit (or None)
         self.instances = instances
         return instances
+    
+    @staticmethod
+    def create_document(instance):
+        assert isinstance(instance, models._ClarityModel)
+        
+        index = search.Index(name=instance._index)
+        
+        if instance._document:
+            index.delete(instance._document)
+        
+        fields = []
+        
+        for field_name in instance._fields:
+            field_type = instance._fields[field_name]
+            
+            fields.append(
+                field_type(name=field_name, value=getattr(instance, field_name))
+            )
+        
+        fields.append(search.AtomField(name='instance', value=instance.key().__str__()))
+        
+        document_id = uuid.uuid4().hex
+        document = search.Document(doc_id=document_id, fields=fields)
+        index.put(document)
+        
+        instance._document = document_id
+        instance.put()
 
     def api_create(self):
         properties = self._model.properties()
@@ -475,6 +503,7 @@ class _APIModelHandler(_APIHandler):
             fields[arg] = value
         instance = self._model(**fields)
         instance.put()
+        self.create_document(instance)
         json.dump({
             'id': instance.key()
         }, self.response, cls=APIJSONEncoder)
@@ -518,10 +547,13 @@ class _APIModelHandler(_APIHandler):
 
     def api_remove(self):
         #Use that shiny new method I made
-        given = self._get_instances()
+        instances = self.get_instances()
         
-        if isinstance(given, (db.Model, list)):
-            db.delete(given)
+        for instance in instances:
+            index = search.Index(name=instance._index)
+            index.delete(instance._document)
+        
+        db.delete(instances)
 
     def api_update(self):
         #Get the ID, turn it into an instance, and deal with any errors
@@ -541,6 +573,7 @@ class _APIModelHandler(_APIHandler):
             
             #Save the updates
             instance.put()
+            self.create_document(instance)
 
     def api_consoleupdate(self):
         oldargs = self.args
@@ -559,6 +592,63 @@ class _APIModelHandler(_APIHandler):
         #self.args_postprocess()
         self.args_verify()
         return self.api_update()
+    
+    def api_search(self):
+        runlimit = int(self.args.pop('limit', 100))
+        runoffset = int(self.args.pop('offset', 0))
+        index = search.Index(name=self._model._index)
+        
+        query_string = self.args.pop('query', '')
+        
+        #If not query string given, assemble one from specified filters
+        if not query_string:
+            assembly = []
+            for arg_name in self.args:
+                logging.info(arg_name)
+                arg_value = self.args[arg_name]
+                assembly.append('{0} = "{1}"'.format(arg_name, arg_value))
+            
+            query_string = " AND ".join(assembly)
+        
+        logging.info('QUERYSTRING ' + query_string)
+        
+        data = {}
+        
+        if not query_string:
+            query = self._model.all()
+
+            if hasattr(self._model, '_order_query'):
+                query = query.order(self._model._order_query)
+
+            data = {
+                'count': query.count(),
+                'results': query.fetch(
+                    limit = runlimit,
+                    offset = runoffset
+                )
+            }
+        
+        else:
+            sorting = None
+            if self._model._order_search:
+                sorting = search.SortOptions(expressions=[self._model._order_search, ])
+
+            search_results = index.search(search.Query(
+                query_string=query_string,
+                options=search.QueryOptions(
+                    limit=runlimit,
+                    offset=runoffset,
+                    sort_options=sorting
+                )
+            ))
+
+            data["count"] = search_results.number_found
+            instance_keys = []
+            for result in search_results:
+                instance_keys.append(result['instance'][0].value)
+            data["results"] = db.get(instance_keys)
+        
+        return data
 
 class APISessionHandler(_APIModelHandler):
     _model = models.Session
@@ -717,6 +807,33 @@ class DummyHandler(_APIHandler):
                 client = client,
                 qrcode = str(i * 10)
             ).put()
+    
+    def api_documents(self):
+        index = search.Index(name=models.Client._index)
+        for client in models.Client.all():
+            if not client._document:
+                fields = []
+                for field_name in models.Client._fields:
+                    field_type = models.Client._fields[field_name]
+                    fields.append(
+                        field_type(name=field_name, value=getattr(client, field_name))
+                    )
+                fields.append(
+                    search.AtomField(name='instance', value=client.key().__str__())
+                )
+                #logging.info(repr(fields))
+                document_id = uuid.uuid4().hex
+                document = search.Document(doc_id=document_id, fields=fields)
+                index.put(document)
+                client._document = document_id
+                client.put()
+    
+    def api_rebuild_docs(self):
+        model_list = [models.Provider, models.Client, models.Ticket]
+        for model in model_list:
+            query = model.all()
+            for result in query:
+                _APIModelHandler.create_document(result)
 
 class UserDummyHandler(_APIHandler): pass
 

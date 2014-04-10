@@ -8,6 +8,7 @@ root.dataCurrentID = ''
 root.dataCurrentQuery = {}
 root.dataCurrentOffset = 0
 
+root.dataAdvancedMode = false
 root.dataFilters = {}
 root.dataPageTotal = 0
 #root.dataCurrentOffset = 0
@@ -23,8 +24,11 @@ initialize = ->
     ($ "#data_buttonRefresh").click -> do dataLoadTable
     
     #Bind the filter shit
+    ($ "#data_radioNormal").click dataModeNormal
+    ($ "#data_radioAdvanced").click dataModeAdvanced
     ($ "#data_filterSelect").change dataFilterChange
     ($ "#data_buttonFilter").click -> do dataFilterAdd
+    ($ "#data_buttonQuery").click -> do dataLoadTable
     
     #Modal buttons that are model-specific
     ($ "#data_modalTicketClose").click dataModalTicketClose
@@ -67,7 +71,7 @@ apiCall = (url, data={}, lazy=false, method='POST', context=document.body) ->
         'error': (xhr, status, error) ->
             if not lazy and xhr and error
                 message = xhr.responseText or error
-                if message is not null and message is not undefined
+                if message
                     bootbox.alert message
         'complete': ->
             if not lazy
@@ -99,13 +103,14 @@ dataLoadTable = (model = root.dataCurrentModel, query = root.dataCurrentQuery, o
     #If the model changes, clear filters
     if model is not root.dataCurrentModel
         root.dataFilters = {}
-        do ($ "data_filterList").children().remove
+        do ($ "#data_filterList").children().remove
+        ($ "#data_queryText").val ""
     
     #Set it again, so the parser can see changes
     root.dataCurrentModel = model
     
     #Construct a url
-    url = "/api/#{model}_query"
+    url = "/api/#{model}_search"
 
     #Start assembling request data
     data =
@@ -113,8 +118,11 @@ dataLoadTable = (model = root.dataCurrentModel, query = root.dataCurrentQuery, o
         'offset': offset
         'limit': root.dataPageMaxResults
     
-    #Add filters
-    data = $.extend data, root.dataFilters
+    #If advanced mode, only insert the query string, else insert the filters
+    if root.dataAdvancedMode
+        data["query"] = ($ "#data_queryText").val()
+    else
+        data = $.extend data, root.dataFilters
     
     #Put the query arguments into the request data
     for key, value of query
@@ -614,6 +622,21 @@ dataFilterAdd = (given_name = null, given_value = null) ->
 dataFilterRemove = (name) ->
     delete root.dataFilters[name]
     do ($ "#data_filter_#{name}").remove
+    do dataLoadTable
+
+dataModeNormal = ->
+    do ($ "#data_divModeNormal").show
+    do ($ "#data_divModeAdvanced").hide
+    ($ "#data_queryText").val ""
+    root.dataAdvancedMode = false
+    do dataLoadTable
+
+dataModeAdvanced = ->
+    do ($ "#data_divModeNormal").hide
+    do ($ "#data_divModeAdvanced").show
+    root.dataFilters = {}
+    do ($ "data_filterList").children().remove
+    root.dataAdvancedMode = true
     do dataLoadTable
 
 #Initialize the console scripting (on ready)
